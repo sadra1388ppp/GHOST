@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private NetworkNodeView? _selectedNetworkNode;
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
+    private double _graphZoom = 1.0;
 
     public MainWindow()
     {
@@ -991,14 +992,18 @@ public partial class MainWindow : Window
     {
         GraphCanvas.Children.Clear();
 
+        var visibleNodes = GetVisibleNetworkNodes();
         const int columns = 4;
         var typeOrder = new[] { "Case", "Evidence", "Experiment", "Observation" };
         var groupedNodes = typeOrder
-            .Select(type => _nodes.Where(node => node.Type == type).ToList())
+            .Select(type => visibleNodes.Where(node => node.Type == type).ToList())
             .ToList();
         var rows = Math.Max(1, groupedNodes.Max(group => group.Count));
         GraphCanvas.Width = 28 + columns * ColumnSpacing + 20;
         GraphCanvas.Height = Math.Max(560, 65 + rows * RowSpacing);
+        GraphCanvas.LayoutTransform = new ScaleTransform(_graphZoom, _graphZoom);
+        EmptyGraphOverlay.Visibility = visibleNodes.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        GraphEmptyTitle.Text = _nodes.Count == 0 ? "NO INVESTIGATION NODES" : "NO NODES MATCH THE FILTER";
 
         var positions = new Dictionary<string, Point>();
         for (var column = 0; column < groupedNodes.Count; column++)
@@ -1068,7 +1073,7 @@ public partial class MainWindow : Window
         }
 
         // Nodes are derived from real records; the layout is stable by record order.
-        foreach (var node in _nodes)
+        foreach (var node in visibleNodes)
         {
             var center = positions[node.Key];
             var card = new Border
@@ -1087,8 +1092,11 @@ public partial class MainWindow : Window
             {
                 args.Handled = true;
                 _selectedNetworkNode = node;
+                var degree = _connections.Count(connection =>
+                    (connection.SourceType == node.Type && connection.SourceId == node.Id) ||
+                    (connection.TargetType == node.Type && connection.TargetId == node.Id));
                 SelectedNodeTitle.Text = node.Title;
-                SelectedNodeDetails.Text = $"{node.Type.ToUpperInvariant()}  /  RECORD ID {node.Id}\n{node.Subtitle}\n\nClick OPEN SELECTED RECORD to work on this item.";
+                SelectedNodeDetails.Text = $"{node.Type.ToUpperInvariant()}  /  RECORD ID {node.Id}\n{node.Subtitle}\nCONNECTIONS // {degree}\n\nClick OPEN SELECTED RECORD to work on this item.";
                 OpenSelectedNodeButton.IsEnabled = true;
             };
 
@@ -1224,6 +1232,63 @@ public partial class MainWindow : Window
             MessageBox.Show(this, $"Could not open the selected record.\\n\\n{ex.Message}",
                 "GHOST // Open record error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private List<NetworkNodeView> GetVisibleNetworkNodes()
+    {
+        var selectedType = (GraphTypeFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All record types";
+        var normalizedType = selectedType switch
+        {
+            "Cases" => "Case",
+            "Evidence" => "Evidence",
+            "Experiments" => "Experiment",
+            "Observations" => "Observation",
+            _ => string.Empty
+        };
+        var term = GraphSearchBox.Text?.Trim() ?? string.Empty;
+        return _nodes
+            .Where(node => string.IsNullOrEmpty(normalizedType) || node.Type == normalizedType)
+            .Where(node => string.IsNullOrEmpty(term) ||
+                           node.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                           node.Type.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                           node.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                           node.Subtitle.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void GraphFilter_Changed(object sender, RoutedEventArgs e)
+    {
+        // XAML can raise SelectionChanged while InitializeComponent is still constructing the graph.
+        if (GraphCanvas is null || !IsLoaded)
+            return;
+
+        _selectedNetworkNode = null;
+        OpenSelectedNodeButton.IsEnabled = false;
+        SelectedNodeTitle.Text = "Select a node on the map";
+        SelectedNodeDetails.Text = "Filters narrow the visible map. Select a node to inspect and open its record.";
+        DrawGraph();
+    }
+
+    private void GraphZoomIn_Click(object sender, RoutedEventArgs e) => SetGraphZoom(_graphZoom + 0.15);
+
+    private void GraphZoomOut_Click(object sender, RoutedEventArgs e) => SetGraphZoom(_graphZoom - 0.15);
+
+    private void GraphFit_Click(object sender, RoutedEventArgs e)
+    {
+        GraphScrollViewer.UpdateLayout();
+        var availableWidth = Math.Max(1, GraphScrollViewer.ViewportWidth - 16);
+        var availableHeight = Math.Max(1, GraphScrollViewer.ViewportHeight - 16);
+        var scale = Math.Min(availableWidth / Math.Max(1, GraphCanvas.Width),
+                             availableHeight / Math.Max(1, GraphCanvas.Height));
+        SetGraphZoom(Math.Clamp(scale, 0.45, 1.0));
+        GraphScrollViewer.ScrollToHorizontalOffset(0);
+        GraphScrollViewer.ScrollToVerticalOffset(0);
+    }
+
+    private void SetGraphZoom(double zoom)
+    {
+        _graphZoom = Math.Clamp(zoom, 0.45, 1.8);
+        GraphCanvas.LayoutTransform = new ScaleTransform(_graphZoom, _graphZoom);
     }
 
     private void NewRelationship_Click(object sender, RoutedEventArgs e)
