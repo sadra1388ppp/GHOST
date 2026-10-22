@@ -24,7 +24,7 @@ Read this note first in a future development session, then inspect the newest ma
 - Shared resources are in src/GHOST.Client/App.xaml; font resource is Cascadia Code with Consolas fallback, resolved on the user's system rather than bundled.
 - All Workspace navigation must remain inside the existing MainWindow: Command Center, Case Files, Digital Lab, Field Lab, Evidence Vault, Investigation Network, and terminal/placeholder modules swap content in the shared ModuleContent host. Do not create child Window instances or call ShowDialog for workspace views. New Case is embedded in the same host too.
 - Dashboard metrics: Open Cases, Closed Cases (red), Experiments, Evidence Items in one horizontal row.
-- Dashboard hero tagline: "EVIDENCE. CONTEXT. CLARITY."; consistent accent-top metric cards, quick access to Create Case / Case Files / Digital Lab, and an OPEN SELECTED action for recent cases.
+- Dashboard hero is a context-aware next-action panel: it opens the latest open case, browses the archive when only closed cases remain, or prompts creation when no cases exist. Other dashboard elements include accent-top metric cards, Create Case / Case Files / Digital Lab quick access, and OPEN SELECTED for recent cases.
 - Main app startup size now adapts to the desktop work area and centers itself; XAML defaults are 1360x820 with smaller minimums for ordinary laptop screens.
 - User wants assistant to implement UI/features and push repository changes; respond in concise, informal Persian when user uses Persian.
 
