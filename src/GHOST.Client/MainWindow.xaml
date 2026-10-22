@@ -184,120 +184,99 @@
                 </StackPanel>
             </Grid>
 
-            <!-- HERO PANEL: DFIR-IRIS-inspired operations header, localized to GHOST -->
-            <Border Grid.Row="1" Background="#0A1B2D"
-                    BorderBrush="#254968" BorderThickness="1" CornerRadius="10"
+            <!-- LIVE SYSTEM MONITOR: real Windows telemetry -->
+            <Border Grid.Row="1" Background="#081722"
+                    BorderBrush="#23435B" BorderThickness="1" CornerRadius="10"
                     ClipToBounds="True" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="248" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="300" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top"
-                            Background="#438BC7" />
+                            Background="#49DDF8" />
 
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="25,10,14,10">
+                    <!-- Host and operating-system status -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,8,12,8">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Background="#123453" CornerRadius="4" Padding="7,4"
-                                    BorderBrush="#2C5D84" BorderThickness="1" Margin="0,0,9,0">
-                                <TextBlock Text="NEXT ACTION" FontSize="8"
-                                           Foreground="#8FCFFF" />
-                            </Border>
-                            <TextBlock Text="GHOST  /  INVESTIGATION WORKSPACE" FontSize="8"
-                                       Foreground="#8FAFCB" VerticalAlignment="Center" />
+                            <Ellipse Width="6" Height="6" Fill="#63FFA0"
+                                     Margin="0,0,7,0" />
+                            <TextBlock Text="LIVE SYSTEM TELEMETRY" FontSize="8"
+                                       Foreground="#8FCFFF" />
                         </StackPanel>
-
-                        <TextBlock x:Name="DashboardHeroTitle" Text="START YOUR FIRST INVESTIGATION"
-                                   FontSize="21" FontWeight="Bold" Margin="0,7,0,3"
-                                   Foreground="#F1F7FC" TextWrapping="Wrap" />
-
-                        <TextBlock x:Name="DashboardHeroDescription"
-                                   Text="Cases, evidence, analysis, timelines and connections — organized in one local workspace."
-                                   FontSize="9" Foreground="#B2C5D8" TextWrapping="Wrap"
-                                   MaxWidth="700" />
-
-                        <Button x:Name="DashboardHeroActionButton" Content="CREATE FIRST CASE"
-                                Click="DashboardHeroAction_Click" HorizontalAlignment="Left"
-                                Padding="10,5" FontSize="9" Margin="0,5,0,0"
-                                Background="#12304B" BorderBrush="#2E638D"
-                                Foreground="#B4DEFF" />
+                        <TextBlock Text="SYSTEM MONITOR" FontSize="18"
+                                   FontWeight="Bold" Margin="0,7,0,4"
+                                   Foreground="#F1F7FC" />
+                        <TextBlock x:Name="SystemHostText" Text="HOST / DETECTING DEVICE"
+                                   FontSize="8" Foreground="#B2C5D8"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="SystemUptimeText" Text="UPTIME / READING..."
+                                   FontSize="8" Foreground="#7FA3BE" Margin="0,5,0,0" />
                     </StackPanel>
 
-                    <Border Grid.Column="1" Background="#0D2237"
-                            BorderBrush="#1E3E5B" BorderThickness="1" CornerRadius="7"
-                            Margin="0,11,15,11" Padding="12,9">
-                        <StackPanel VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Ellipse Width="5" Height="5" Fill="#62B9FF"
-                                         Margin="0,0,7,0" />
-                                <TextBlock Text="INVESTIGATION TOOLKIT" FontSize="8"
+                    <!-- Live metrics -->
+                    <Grid Grid.Column="1" Margin="0,10,12,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#0D2232"
+                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                                Margin="0,0,7,0" Padding="10,7">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="CPU LOAD" FontSize="8"
                                            Foreground="#8FCFFF" />
+                                <TextBlock x:Name="CpuUsageText" Text="--%"
+                                           FontSize="23" FontWeight="SemiBold"
+                                           Foreground="#63FFA0" Margin="0,2,0,3" />
+                                <ProgressBar x:Name="CpuUsageBar" Minimum="0" Maximum="100"
+                                             Value="0" Height="5" BorderThickness="0"
+                                             Background="#18364A" Foreground="#63FFA0" />
+                                <TextBlock x:Name="CpuUsageDetailText" Text="Sampling CPU activity..."
+                                           FontSize="7" Foreground="#9AB4C7"
+                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                            <UniformGrid Columns="2" Margin="0,8,0,0">
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0,0,5,5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="CASE FILES" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0,0,0,5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="EVIDENCE VAULT" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0,0,5,5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="TIMELINE" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0,0,0,5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="NETWORK LINKS" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0,0,5,0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="AUDIT HISTORY" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Background="#102B44" BorderBrush="#214967"
-                                        BorderThickness="1" CornerRadius="4"
-                                        Padding="6,4" Margin="0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
-                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
-                                        <TextBlock Text="ANALYSIS LABS" FontSize="7"
-                                                   Foreground="#D3E5F5" />
-                                    </StackPanel>
-                                </Border>
-                            </UniformGrid>
-                        </StackPanel>
-                    </Border>
+                        </Border>
+
+                        <Border Grid.Column="1" Background="#0D2232"
+                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                                Margin="0,0,7,0" Padding="10,7">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="MEMORY / RAM" FontSize="8"
+                                           Foreground="#8FCFFF" />
+                                <TextBlock x:Name="MemoryUsageText" Text="--%"
+                                           FontSize="23" FontWeight="SemiBold"
+                                           Foreground="#49DDF8" Margin="0,2,0,3" />
+                                <ProgressBar x:Name="MemoryUsageBar" Minimum="0" Maximum="100"
+                                             Value="0" Height="5" BorderThickness="0"
+                                             Background="#18364A" Foreground="#49DDF8" />
+                                <TextBlock x:Name="MemoryUsageDetailText" Text="Reading physical memory..."
+                                           FontSize="7" Foreground="#9AB4C7"
+                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Background="#0D2232"
+                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                                Padding="10,7">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="SYSTEM DRIVE" FontSize="8"
+                                           Foreground="#8FCFFF" />
+                                <TextBlock x:Name="DiskUsageText" Text="--%"
+                                           FontSize="23" FontWeight="SemiBold"
+                                           Foreground="#D8E98A" Margin="0,2,0,3" />
+                                <ProgressBar x:Name="DiskUsageBar" Minimum="0" Maximum="100"
+                                             Value="0" Height="5" BorderThickness="0"
+                                             Background="#18364A" Foreground="#D8E98A" />
+                                <TextBlock x:Name="DiskUsageDetailText" Text="Reading system drive..."
+                                           FontSize="7" Foreground="#9AB4C7"
+                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
 
