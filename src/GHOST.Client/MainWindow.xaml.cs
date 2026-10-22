@@ -1356,6 +1356,7 @@ public partial class MainWindow : Window
                 titleBox.Clear();
                 hypothesisBox.Clear();
                 procedureBox.Clear();
+                experimentList.SelectedItem = null;
                 RefreshExperiments();
                 RefreshStats();
                 RefreshNetwork();
