@@ -317,7 +317,8 @@ public partial class MainWindow : Window
                 throw new IOException("The Windows system drive is not ready.");
 
             var totalBytes = (ulong)drive.TotalSize;
-            // TotalFreeSpace reflects the whole volume; AvailableFreeSpace may be quota-limited.\n            var freeBytes = (ulong)Math.Max(0L, drive.TotalFreeSpace);
+            // TotalFreeSpace reflects the whole volume; AvailableFreeSpace may be quota-limited.
+            var freeBytes = (ulong)Math.Max(0L, drive.TotalFreeSpace);
             var usedBytes = totalBytes > freeBytes ? totalBytes - freeBytes : 0UL;
             var percentage = usedBytes * 100d / totalBytes;
             var driveLabel = systemRoot.TrimEnd('\\');
