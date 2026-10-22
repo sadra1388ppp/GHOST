@@ -27,8 +27,9 @@ Goal: cases are the central containers for the rest of an investigation.
 - [x] Create and persist a case
 - [x] Search/filter the case archive
 - [x] Close and reopen a case with an audit entry
-- [ ] Edit case title and description
-- [ ] Show case details including evidence, experiments, observations, timeline, links, and audit entries
+- [x] Edit case title and description with an audit entry
+- [x] Show case workspace with evidence, experiments, observations, timeline, relationships, and audit history
+- [x] Open a case from the archive or by double-clicking a recent dashboard case
 - [ ] Filtering by status and sorting by date/title
 - [ ] Confirm destructive actions and prefer archive/soft-delete to permanent deletion
 - [ ] Validate required fields and enforce sensible text length limits
@@ -37,15 +38,17 @@ Acceptance: every case can be found, reviewed, updated, closed, and reopened; da
 
 ## Stage 2 — Evidence Vault
 
-- [ ] Select one or more files through a native file picker
-- [ ] Copy files into the app-managed Evidence folder; never modify or move the source originals
-- [ ] Store original name, copied vault path, file size, file type, SHA-256, import time, source/provenance notes, and optional case association
-- [ ] Stream large files when hashing; avoid loading entire files into memory
-- [ ] Verify a stored file against its recorded hash on demand
-- [ ] Clearly mark missing or changed files and record the verification result in audit history
-- [ ] Archive evidence before removal; keep metadata and audit records
-- [ ] Prevent path traversal and filename collisions; use generated vault filenames
-- [ ] Surface evidence count and status in the dashboard and Investigation Network
+- [x] Select one or more files through a native file picker
+- [x] Copy files into the app-managed Evidence folder; never modify or move the source originals
+- [x] Store original name, copied vault path, file type, SHA-256, import time, and case association
+- [ ] Persist file size in the evidence record and collect source/provenance notes through the import form
+- [x] Stream large files when hashing; avoid loading entire files into memory
+- [x] Verify a stored file against its recorded hash on demand
+- [x] Mark missing or changed copies during verification and record the result in audit history
+- [x] Archive evidence while retaining the file, metadata, and audit records
+- [x] Prevent path traversal and filename collisions; use generated vault filenames
+- [x] Surface active evidence counts and records in the dashboard and Investigation Network
+- [x] Reveal a vault copy in File Explorer without executing it from GHOST
 
 Acceptance: the app never edits the original file; an import is traceable; re-verification correctly detects a changed or missing vault copy.
 
@@ -83,8 +86,9 @@ Acceptance: a field note or measurement retains when it happened, when it was re
 - [x] Create/delete typed relationships with notes and confidence
 - [x] Audit relationship creation/deletion
 - [x] Dashed styling for hypothesis/contradiction relationships
-- [ ] Search/filter node types and case association
-- [ ] Zoom and pan; fit-to-view and reset
+- [x] Search nodes by title/type/ID and filter by node type
+- [x] Zoom in/out and fit-to-view; use the graph's scrollbars to pan
+- [ ] Add a reset-view action and filter by case association
 - [ ] Improve layouts for larger graphs and reduce overlapping labels/edges
 - [ ] Edit a saved relationship
 - [ ] Show node details and navigate to the corresponding record
