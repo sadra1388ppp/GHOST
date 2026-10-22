@@ -4253,7 +4253,7 @@ public partial class MainWindow : Window
             row.Children.Add(editButton);
 
             var runButton = MakeSmallButton("RUN", "Run this custom command in the shared PowerShell session");
-            runButton.Click += (_, _) => RunGhostCustomCommandByName(customCommand.Name);
+            runButton.Click += (_, _) => RunGhostCustomCommandFromButton(customCommand.Name);
             Grid.SetColumn(runButton, 3);
             row.Children.Add(runButton);
 
@@ -4347,6 +4347,14 @@ public partial class MainWindow : Window
 
         ExecuteGhostCustomPowerShellScript(command);
         return true;
+    }
+
+    private void RunGhostCustomCommandFromButton(string name)
+    {
+        var input = GetCurrentConsoleInput();
+        input.Text = name;
+        ExecuteDashboardPowerShellCommand(input);
+        input.Focus();
     }
 
     private void ExecuteGhostCustomCommandByName(string name)
