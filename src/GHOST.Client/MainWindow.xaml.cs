@@ -4,6 +4,10 @@ using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.Windows.Data;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using Microsoft.Win32;
 using GHOST.Infrastructure.Persistence;
 using GHOST.Models;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +29,9 @@ public partial class MainWindow : Window
     private List<NetworkNodeView> _nodes = [];
     private List<NetworkConnectionView> _connections = [];
     private UIElement? _activeModuleContent;
+    private NetworkNodeView? _selectedNetworkNode;
+    private int? _selectedCaseId;
+    private int? _selectedEvidenceId;
 
     public MainWindow()
     {
@@ -55,6 +62,16 @@ public partial class MainWindow : Window
 
     private void ShowModuleView(UIElement content, string title)
     {
+        SetActiveNavigation(title switch
+        {
+            "CASE FILES" or "NEW CASE" => "Cases",
+            "DIGITAL LAB" => "DigitalLab",
+            "FIELD LAB" => "FieldLab",
+            "EVIDENCE VAULT" => "EvidenceVault",
+            "GHOST TERMINAL" => "Terminal",
+            _ => "Dashboard"
+        });
+
         DashboardView.Visibility = Visibility.Collapsed;
         NetworkView.Visibility = Visibility.Collapsed;
         ModuleView.Visibility = Visibility.Visible;
@@ -97,8 +114,47 @@ public partial class MainWindow : Window
         ModuleContent.Content = shell;
     }
 
+    private void SetActiveNavigation(string active)
+    {
+        var items = new (string Key, Button Control)[]
+        {
+            ("Dashboard", NavDashboard),
+            ("Cases", NavCases),
+            ("DigitalLab", NavDigitalLab),
+            ("FieldLab", NavFieldLab),
+            ("EvidenceVault", NavEvidenceVault),
+            ("Network", NavNetwork),
+            ("Terminal", NavTerminal)
+        };
+
+        foreach (var item in items)
+        {
+            var selected = item.Key == active;
+            item.Control.Background = selected
+                ? new SolidColorBrush(Color.FromRgb(19, 51, 31))
+                : Brushes.Transparent;
+            item.Control.BorderBrush = selected
+                ? new SolidColorBrush(Color.FromRgb(70, 150, 95))
+                : Brushes.Transparent;
+            item.Control.Foreground = selected
+                ? (Brush)FindResource("NeonBrush")
+                : (Brush)FindResource("MutedBrush");
+            item.Control.FontWeight = selected ? FontWeights.Bold : FontWeights.Medium;
+            item.Control.Effect = selected
+                ? new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Color.FromRgb(64, 255, 132),
+                    BlurRadius = 11,
+                    ShadowDepth = 0,
+                    Opacity = 0.12
+                }
+                : null;
+        }
+    }
+
     private void Dashboard_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("Dashboard");
         NetworkView.Visibility = Visibility.Collapsed;
         ModuleView.Visibility = Visibility.Collapsed;
         ModuleContent.Content = null;
@@ -128,6 +184,7 @@ public partial class MainWindow : Window
 
         RecentCasesList.ItemsSource = recentCases
             .Select(x => new RecentCaseSummary(
+                x.Id,
                 x.CaseNumber,
                 x.Title,
                 x.Status,
@@ -298,6 +355,11 @@ public partial class MainWindow : Window
             FontFamily = (FontFamily)FindResource("HackerFont"),
             DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
         };
+        list.MouseDoubleClick += (_, _) =>
+        {
+            if (list.SelectedItem is CaseArchiveRow selected)
+                OpenCaseWorkspace(selected.Id);
+        };
 
         // Wire the search event only after both controls exist, because RefreshRows
         // reads from both search and list.
@@ -309,6 +371,21 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 12, 0, 0)
         };
+        var openCaseButton = new Button
+        {
+            Content = "OPEN / WORK ON CASE",
+            MinWidth = 190,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        openCaseButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is CaseArchiveRow selected)
+                OpenCaseWorkspace(selected.Id);
+            else
+                MessageBox.Show(this, "Select a case to open its workspace.", "GHOST",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+        };
+
         var statusButton = new Button
         {
             Content = "CLOSE / REOPEN CASE",
@@ -358,6 +435,7 @@ public partial class MainWindow : Window
                     "GHOST // Update error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
+        footer.Children.Add(openCaseButton);
         footer.Children.Add(statusButton);
         footer.Children.Add(close);
         DockPanel.SetDock(footer, Dock.Bottom);
@@ -404,8 +482,15 @@ public partial class MainWindow : Window
         RefreshRows();
     }
 
+    private void RecentCase_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (RecentCasesList.SelectedItem is RecentCaseSummary selected)
+            OpenCaseWorkspace(selected.Id);
+    }
+
     private void Network_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("Network");
         DashboardView.Visibility = Visibility.Collapsed;
         ModuleView.Visibility = Visibility.Collapsed;
         ModuleContent.Content = null;
@@ -489,8 +574,10 @@ public partial class MainWindow : Window
                 : Visibility.Collapsed;
 
             DrawGraph();
+            _selectedNetworkNode = null;
             SelectedNodeTitle.Text = "Select a node on the map";
-            SelectedNodeDetails.Text = "Click a node to inspect its local record.";
+            SelectedNodeDetails.Text = "Click a node to inspect its local record, then open it to continue the investigation.";
+            OpenSelectedNodeButton.IsEnabled = false;
             ConnectionsList.SelectedItem = null;
             DeleteConnectionButton.IsEnabled = false;
         }
@@ -520,18 +607,24 @@ public partial class MainWindow : Window
         GraphCanvas.Children.Clear();
 
         const int columns = 4;
-        var rows = Math.Max(1, (int)Math.Ceiling(_nodes.Count / (double)columns));
-        GraphCanvas.Width = 1100;
-        GraphCanvas.Height = Math.Max(560, 55 + rows * RowSpacing);
+        var typeOrder = new[] { "Case", "Evidence", "Experiment", "Observation" };
+        var groupedNodes = typeOrder
+            .Select(type => _nodes.Where(node => node.Type == type).ToList())
+            .ToList();
+        var rows = Math.Max(1, groupedNodes.Max(group => group.Count));
+        GraphCanvas.Width = 28 + columns * ColumnSpacing + 20;
+        GraphCanvas.Height = Math.Max(560, 65 + rows * RowSpacing);
 
         var positions = new Dictionary<string, Point>();
-        for (var i = 0; i < _nodes.Count; i++)
+        for (var column = 0; column < groupedNodes.Count; column++)
         {
-            var column = i % columns;
-            var row = i / columns;
-            positions[_nodes[i].Key] = new Point(
-                28 + column * ColumnSpacing + NodeWidth / 2,
-                35 + row * RowSpacing + NodeHeight / 2);
+            for (var row = 0; row < groupedNodes[column].Count; row++)
+            {
+                var node = groupedNodes[column][row];
+                positions[node.Key] = new Point(
+                    28 + column * ColumnSpacing + NodeWidth / 2,
+                    35 + row * RowSpacing + NodeHeight / 2);
+            }
         }
 
         var edgeLabels = new List<(Point Point, string Text, Brush Brush)>();
@@ -608,8 +701,10 @@ public partial class MainWindow : Window
             card.MouseLeftButtonUp += (_, args) =>
             {
                 args.Handled = true;
+                _selectedNetworkNode = node;
                 SelectedNodeTitle.Text = node.Title;
-                SelectedNodeDetails.Text = $"{node.Type.ToUpperInvariant()}  /  RECORD ID {node.Id}\n{node.Subtitle}";
+                SelectedNodeDetails.Text = $"{node.Type.ToUpperInvariant()}  /  RECORD ID {node.Id}\n{node.Subtitle}\n\nClick OPEN SELECTED RECORD to work on this item.";
+                OpenSelectedNodeButton.IsEnabled = true;
             };
 
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -686,6 +781,65 @@ public partial class MainWindow : Window
         "Observation" => new SolidColorBrush(Color.FromRgb(21, 26, 37)),
         _ => (Brush)FindResource("PanelAltBrush")
     };
+
+    private void OpenSelectedNode_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedNetworkNode is not NetworkNodeView node)
+            return;
+
+        try
+        {
+            switch (node.Type)
+            {
+                case "Case":
+                    OpenCaseWorkspace(node.Id);
+                    break;
+
+                case "Evidence":
+                    using (var db = new GhostDbContext())
+                    {
+                        var item = db.Evidence.AsNoTracking().FirstOrDefault(x => x.Id == node.Id);
+                        if (item is null)
+                        {
+                            RefreshNetwork();
+                            return;
+                        }
+                        _selectedCaseId = item.CaseFileId;
+                        _selectedEvidenceId = item.Id;
+                    }
+                    EvidenceVault_Click(this, new RoutedEventArgs());
+                    break;
+
+                case "Experiment":
+                    using (var db = new GhostDbContext())
+                    {
+                        var item = db.Experiments.AsNoTracking().FirstOrDefault(x => x.Id == node.Id);
+                        if (item is null) return;
+                        _selectedCaseId = item.CaseFileId;
+                    }
+                    DigitalLab_Click(this, new RoutedEventArgs());
+                    break;
+
+                case "Observation":
+                    using (var db = new GhostDbContext())
+                    {
+                        var item = db.Observations.AsNoTracking().FirstOrDefault(x => x.Id == node.Id);
+                        if (item is null) return;
+                        _selectedCaseId = db.Experiments.AsNoTracking()
+                            .Where(x => x.Id == item.ExperimentId)
+                            .Select(x => (int?)x.CaseFileId)
+                            .FirstOrDefault();
+                    }
+                    DigitalLab_Click(this, new RoutedEventArgs());
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Could not open the selected record.\\n\\n{ex.Message}",
+                "GHOST // Open record error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void NewRelationship_Click(object sender, RoutedEventArgs e)
     {
@@ -901,8 +1055,9 @@ public partial class MainWindow : Window
         form.Children.Add(detailsBox);
         form.Children.Add(measurementRow);
         form.Children.Add(saveButton);
-        DockPanel.SetDock(form, Dock.Top);
-        root.Children.Add(form);
+        var formCard = CreateModuleCard(form, new Thickness(0, 0, 0, 12));
+        DockPanel.SetDock(formCard, Dock.Top);
+        root.Children.Add(formCard);
 
         var status = new TextBlock
         {
@@ -963,12 +1118,15 @@ public partial class MainWindow : Window
 
         using (var db = new GhostDbContext())
         {
-            casePicker.ItemsSource = db.Cases.AsNoTracking()
+            var fieldCases = db.Cases.AsNoTracking()
                 .OrderByDescending(x => x.CreatedAt)
                 .ToList()
                 .Select(x => new FieldCaseOption(x.Id, x.CaseNumber, x.Title))
                 .ToList();
-            casePicker.SelectedIndex = casePicker.Items.Count > 0 ? 0 : -1;
+            casePicker.ItemsSource = fieldCases;
+            casePicker.SelectedItem = _selectedCaseId.HasValue
+                ? fieldCases.FirstOrDefault(x => x.Id == _selectedCaseId.Value)
+                : fieldCases.FirstOrDefault();
         }
         casePicker.SelectionChanged += (_, _) =>
         {
@@ -1159,8 +1317,9 @@ public partial class MainWindow : Window
         form.Children.Add(hypothesisBox);
         form.Children.Add(procedureBox);
         form.Children.Add(createButton);
-        DockPanel.SetDock(form, Dock.Top);
-        root.Children.Add(form);
+        var formCard = CreateModuleCard(form, new Thickness(0, 0, 0, 12));
+        DockPanel.SetDock(formCard, Dock.Top);
+        root.Children.Add(formCard);
 
         var observationPanel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
         observationPanel.Children.Add(new TextBlock
@@ -1221,8 +1380,9 @@ public partial class MainWindow : Window
         actionRow.Children.Add(saveResultButton);
         actionRow.Children.Add(addObservationButton);
         observationPanel.Children.Add(actionRow);
-        DockPanel.SetDock(observationPanel, Dock.Bottom);
-        root.Children.Add(observationPanel);
+        var observationCard = CreateModuleCard(observationPanel, new Thickness(0, 12, 0, 0));
+        DockPanel.SetDock(observationCard, Dock.Bottom);
+        root.Children.Add(observationCard);
 
         var status = new TextBlock
         {
@@ -1280,12 +1440,15 @@ public partial class MainWindow : Window
 
         using (var db = new GhostDbContext())
         {
-            casePicker.ItemsSource = db.Cases.AsNoTracking()
+            var labCases = db.Cases.AsNoTracking()
                 .OrderByDescending(x => x.CreatedAt)
                 .ToList()
                 .Select(x => new LabCaseOption(x.Id, x.CaseNumber, x.Title))
                 .ToList();
-            casePicker.SelectedIndex = casePicker.Items.Count > 0 ? 0 : -1;
+            casePicker.ItemsSource = labCases;
+            casePicker.SelectedItem = _selectedCaseId.HasValue
+                ? labCases.FirstOrDefault(x => x.Id == _selectedCaseId.Value)
+                : labCases.FirstOrDefault();
         }
 
         casePicker.SelectionChanged += (_, _) =>
@@ -1603,6 +1766,7 @@ public partial class MainWindow : Window
     }
 
     private sealed record RecentCaseSummary(
+        int Id,
         string CaseNumber,
         string Title,
         string Status,
