@@ -811,7 +811,7 @@
                                          CaretBrush="#63FFA0" FontSize="9"
                                          VerticalContentAlignment="Center"
                                          ToolTip="Real PowerShell: run commands, pipelines, scripts, and local tools with your Windows account permissions."
-                                         KeyDown="DashboardConsoleInput_KeyDown" />
+                                         PreviewKeyDown="DashboardConsoleInput_KeyDown" />
                                 <Button Grid.Column="2" Content="RUN  ↵"
                                         Click="DashboardConsoleRun_Click"
                                         Padding="8,5" FontSize="8"

@@ -572,7 +572,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("ghost status               App + live system snapshot", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost cases                List recent case files", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost case add \"<title>\" [--description \"<text>\"]  Create a case", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost case delete <id|case-number> --confirm  Delete a case and linked records", Color.FromRgb(245, 196, 106));
+        AddDashboardConsoleLine("ghost case delete <id|case-number> --confirm  Delete a case and linked records", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost evidence             Evidence and archive totals", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost labs                 Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost audit [count]        Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
@@ -660,6 +660,43 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("Use: ghost open <ID or case number>", Color.FromRgb(136, 171, 148));
     }
 
+    private static int GetNextAvailableCaseId(GhostDbContext db)
+    {
+        var usedIds = db.Cases.AsNoTracking()
+            .Select(x => x.Id)
+            .OrderBy(x => x)
+            .ToList();
+
+        var candidate = 1;
+        foreach (var id in usedIds)
+        {
+            if (id < candidate)
+                continue;
+
+            if (id > candidate)
+                break;
+
+            if (candidate == int.MaxValue)
+                throw new InvalidOperationException("No available positive case ID remains.");
+
+            candidate++;
+        }
+
+        return candidate;
+    }
+
+    private static string GenerateUniqueCaseNumber(GhostDbContext db)
+    {
+        string caseNumber;
+        do
+        {
+            caseNumber = $"CASE-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(100, 999)}";
+        }
+        while (db.Cases.Any(x => x.CaseNumber == caseNumber));
+
+        return caseNumber;
+    }
+
     private void ExecuteGhostCaseCommand(string input)
     {
         if (!TryParseGhostCommandArguments(input, out var arguments) ||
@@ -711,15 +748,11 @@ public partial class MainWindow : Window
             using var db = new GhostDbContext();
             using var transaction = db.Database.BeginTransaction();
 
-            string caseNumber;
-            do
-            {
-                caseNumber = $"CASE-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(100, 999)}";
-            }
-            while (db.Cases.Any(x => x.CaseNumber == caseNumber));
+            var caseNumber = GenerateUniqueCaseNumber(db);
 
             var item = new CaseFile
             {
+                Id = GetNextAvailableCaseId(db),
                 Title = title,
                 Description = description,
                 CaseNumber = caseNumber
@@ -762,15 +795,11 @@ public partial class MainWindow : Window
             var identifier = arguments[3].Trim();
             using var db = new GhostDbContext();
             CaseFile? match;
-            if (int.TryParse(identifier, out var caseId))
-            {
-                match = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
-            }
+            if (int.TryParse(identifier, out var selectedId))
+                match = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == selectedId);
             else
-            {
                 match = db.Cases.AsNoTracking().ToList().FirstOrDefault(x =>
                     string.Equals(x.CaseNumber, identifier, StringComparison.OrdinalIgnoreCase));
-            }
 
             if (match is null)
             {
@@ -787,63 +816,107 @@ public partial class MainWindow : Window
                 return;
             }
 
-            using var transaction = db.Database.BeginTransaction();
-            var evidence = db.Evidence.Where(x => x.CaseFileId == caseFile.Id).ToList();
-            var experiments = db.Experiments.Where(x => x.CaseFileId == caseFile.Id).ToList();
-            var experimentIds = experiments.Select(x => x.Id).ToHashSet();
-            var observations = db.Observations
-                .Where(x => experimentIds.Contains(x.ExperimentId))
-                .ToList();
-            var observationIds = observations.Select(x => x.Id).ToHashSet();
-            var evidenceIds = evidence.Select(x => x.Id).ToHashSet();
-            var timelineEvents = db.TimelineEvents.Where(x => x.CaseFileId == caseFile.Id).ToList();
-
-            bool IsDeletedRecord(string type, int id) => type.ToLowerInvariant() switch
-            {
-                "case" => id == caseFile.Id,
-                "evidence" => evidenceIds.Contains(id),
-                "experiment" => experimentIds.Contains(id),
-                "observation" => observationIds.Contains(id),
-                _ => false
-            };
-
-            var relatedRelationships = db.Relationships.ToList()
-                .Where(x => IsDeletedRecord(x.SourceType, x.SourceId) ||
-                            IsDeletedRecord(x.TargetType, x.TargetId))
-                .ToList();
-            db.Relationships.RemoveRange(relatedRelationships);
-            db.Observations.RemoveRange(observations);
-            db.Experiments.RemoveRange(experiments);
-            db.Evidence.RemoveRange(evidence);
-            db.TimelineEvents.RemoveRange(timelineEvents);
-            db.Cases.Remove(caseFile);
-            db.AuditLogs.Add(new AuditEntry
-            {
-                EntityType = "Case",
-                EntityId = caseFile.Id,
-                Action = "Deleted",
-                Details = $"Deleted case {caseFile.CaseNumber} ({caseFile.Title}) from GHOST terminal. Removed {evidence.Count} evidence records, {experiments.Count} experiments, {observations.Count} observations, {timelineEvents.Count} timeline events and {relatedRelationships.Count} relationships. Evidence files were retained on disk."
-            });
-            db.SaveChanges();
-            transaction.Commit();
-
+            var deleted = DeleteCaseRecords(db, caseFile, "GHOST terminal");
             RefreshStats();
             RefreshNetwork();
             AddDashboardConsoleLine(
-                $"CASE DELETED // ID {caseFile.Id} // {caseFile.CaseNumber}",
+                $"CASE DELETED // ID {deleted.CaseId} // {deleted.CaseNumber}",
                 Color.FromRgb(255, 142, 142), true);
             AddDashboardConsoleLine(
-                $"REMOVED  {evidence.Count} evidence records  |  {experiments.Count} experiments  |  {observations.Count} observations  |  {timelineEvents.Count} timeline events  |  {relatedRelationships.Count} relationships",
+                $"REMOVED  {deleted.EvidenceCount} evidence records  |  {deleted.ExperimentCount} experiments  |  {deleted.ObservationCount} observations  |  {deleted.TimelineEventCount} timeline events  |  {deleted.RelationshipCount} relationships",
                 Color.FromRgb(245, 196, 106));
             AddDashboardConsoleLine(
-                "Audit history was retained. Evidence files were kept on disk and were not physically deleted.",
+                "Historical audit events were retained under the deleted case identity. Evidence files remain on disk.",
                 Color.FromRgb(136, 171, 148));
             return;
         }
-
         AddDashboardConsoleLine(
             "Unknown case action. Use 'ghost case add' or 'ghost case delete'.",
             Color.FromRgb(245, 196, 106), true);
+    }
+
+    private static CaseDeletionSummary DeleteCaseRecords(
+        GhostDbContext db,
+        CaseFile caseFile,
+        string source)
+    {
+        using var transaction = db.Database.BeginTransaction();
+
+        var evidence = db.Evidence.Where(x => x.CaseFileId == caseFile.Id).ToList();
+        var experiments = db.Experiments.Where(x => x.CaseFileId == caseFile.Id).ToList();
+        var experimentIds = experiments.Select(x => x.Id).ToHashSet();
+        var observations = db.Observations
+            .Where(x => experimentIds.Contains(x.ExperimentId))
+            .ToList();
+        var observationIds = observations.Select(x => x.Id).ToHashSet();
+        var evidenceIds = evidence.Select(x => x.Id).ToHashSet();
+        var timelineEvents = db.TimelineEvents.Where(x => x.CaseFileId == caseFile.Id).ToList();
+        var timelineIds = timelineEvents.Select(x => x.Id).ToHashSet();
+
+        bool IsDeletedRecord(string type, int id) => type.ToLowerInvariant() switch
+        {
+            "case" => id == caseFile.Id,
+            "evidence" => evidenceIds.Contains(id),
+            "experiment" => experimentIds.Contains(id),
+            "observation" => observationIds.Contains(id),
+            "timeline" or "timelineevent" or "fieldentry" => timelineIds.Contains(id),
+            _ => false
+        };
+
+        var relatedRelationships = db.Relationships.ToList()
+            .Where(x => IsDeletedRecord(x.SourceType, x.SourceId) ||
+                        IsDeletedRecord(x.TargetType, x.TargetId))
+            .ToList();
+        var relationshipIds = relatedRelationships.Select(x => x.Id).ToHashSet();
+
+        bool IsHistoricalAuditEntry(AuditEntry entry) => entry.EntityType.ToLowerInvariant() switch
+        {
+            "case" => entry.EntityId == caseFile.Id,
+            "evidence" => evidenceIds.Contains(entry.EntityId),
+            "experiment" => experimentIds.Contains(entry.EntityId),
+            "observation" => observationIds.Contains(entry.EntityId),
+            "fieldentry" or "timeline" or "timelineevent" => timelineIds.Contains(entry.EntityId),
+            "relationship" => relationshipIds.Contains(entry.EntityId),
+            _ => false
+        };
+
+        // Keep prior activity for the global audit, but detach it from a reusable numeric ID.
+        var historicalAuditEntries = db.AuditLogs.ToList()
+            .Where(IsHistoricalAuditEntry)
+            .ToList();
+        foreach (var entry in historicalAuditEntries)
+        {
+            var originalType = entry.EntityType;
+            entry.EntityType = $"Archived/{caseFile.CaseNumber}/{originalType}";
+            entry.Details = $"[Historical case {caseFile.CaseNumber}] {entry.Details}";
+        }
+
+        db.Relationships.RemoveRange(relatedRelationships);
+        db.Observations.RemoveRange(observations);
+        db.Experiments.RemoveRange(experiments);
+        db.Evidence.RemoveRange(evidence);
+        db.TimelineEvents.RemoveRange(timelineEvents);
+        db.Cases.Remove(caseFile);
+        db.AuditLogs.Add(new AuditEntry
+        {
+            EntityType = "DeletedCase",
+            EntityId = caseFile.Id,
+            Action = "Deleted",
+            Details = $"Deleted case {caseFile.CaseNumber} ({caseFile.Title}) from {source}. Removed {evidence.Count} evidence records, {experiments.Count} experiments, {observations.Count} observations, {timelineEvents.Count} timeline events and {relatedRelationships.Count} relationships. Historical activity was retained with the case number. Evidence files were retained on disk."
+        });
+
+        db.SaveChanges();
+        transaction.Commit();
+
+        return new CaseDeletionSummary(
+            caseFile.Id,
+            caseFile.CaseNumber,
+            caseFile.Title,
+            evidence.Count,
+            experiments.Count,
+            observations.Count,
+            timelineEvents.Count,
+            relatedRelationships.Count);
     }
 
     private static bool TryParseGhostCommandArguments(string input, out List<string> arguments)
@@ -1566,6 +1639,7 @@ public partial class MainWindow : Window
 
     private void NewCase_Click(object sender, RoutedEventArgs e)
     {
+        var returnToCaseFiles = string.Equals(PageTitle.Text, "CASE FILES", StringComparison.OrdinalIgnoreCase);
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock
         {
@@ -1583,6 +1657,7 @@ public partial class MainWindow : Window
         var title = new TextBox
         {
             Height = 34,
+            MaxLength = 200,
             Padding = new Thickness(8),
             Background = (Brush)FindResource("PanelAltBrush"),
             Foreground = Brushes.White,
@@ -1620,7 +1695,13 @@ public partial class MainWindow : Window
             Width = 90,
             Margin = new Thickness(0, 0, 8, 0)
         };
-        cancel.Click += (_, _) => Dashboard_Click(this, new RoutedEventArgs());
+        cancel.Click += (_, _) =>
+        {
+            if (returnToCaseFiles)
+                Cases_Click(this, new RoutedEventArgs());
+            else
+                Dashboard_Click(this, new RoutedEventArgs());
+        };
 
         var save = new Button { Content = "SAVE CASE", Width = 110 };
         save.Click += (_, _) =>
@@ -1638,36 +1719,34 @@ public partial class MainWindow : Window
 
             try
             {
-                using var db = new GhostDbContext();
-
-                var item = new CaseFile
+                int createdCaseId;
+                using (var db = new GhostDbContext())
                 {
-                    Title = title.Text.Trim(),
-                    Description = description.Text.Trim(),
-                    CaseNumber = $"CASE-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(100, 999)}"
-                };
+                    using var transaction = db.Database.BeginTransaction();
+                    var item = new CaseFile
+                    {
+                        Id = GetNextAvailableCaseId(db),
+                        Title = title.Text.Trim(),
+                        Description = description.Text.Trim(),
+                        CaseNumber = GenerateUniqueCaseNumber(db)
+                    };
 
-                db.Cases.Add(item);
-                db.SaveChanges();
+                    db.Cases.Add(item);
+                    db.AuditLogs.Add(new AuditEntry
+                    {
+                        EntityType = "Case",
+                        EntityId = item.Id,
+                        Action = "Created",
+                        Details = $"Case created: {item.Title} ({item.CaseNumber})."
+                    });
+                    db.SaveChanges();
+                    transaction.Commit();
+                    createdCaseId = item.Id;
+                }
 
-                db.AuditLogs.Add(new AuditEntry
-                {
-                    EntityType = "Case",
-                    EntityId = item.Id,
-                    Action = "Created",
-                    Details = $"Case created: {item.Title}"
-                });
-                db.SaveChanges();
-
-                Dashboard_Click(this, new RoutedEventArgs());
                 RefreshStats();
-
-                MessageBox.Show(
-                    this,
-                    $"Case {item.CaseNumber} saved locally.",
-                    "GHOST",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                RefreshNetwork();
+                OpenCaseWorkspace(createdCaseId);
             }
             catch (Exception ex)
             {
@@ -1689,20 +1768,37 @@ public partial class MainWindow : Window
     private void Cases_Click(object sender, RoutedEventArgs e)
     {
         var panel = new DockPanel { Margin = new Thickness(20) };
-        var headingPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
-        headingPanel.Children.Add(new TextBlock
+        var headingPanel = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+        headingPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        headingPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var headingText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        headingText.Children.Add(new TextBlock
         {
             Text = "CASE FILES // LOCAL ARCHIVE",
             FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
             Foreground = (Brush)FindResource("NeonBrush")
         });
-        headingPanel.Children.Add(new TextBlock
+        headingText.Children.Add(new TextBlock
         {
-            Text = "Search investigations and safely change their status. Cases are retained for audit history.",
+            Text = "Search, update, and work through your investigations from one place.",
             FontSize = 9,
             Foreground = (Brush)FindResource("MutedBrush"),
             Margin = new Thickness(0, 5, 0, 0)
         });
+        headingPanel.Children.Add(headingText);
+        var newCaseButton = new Button
+        {
+            Content = "＋ NEW CASE",
+            MinWidth = 126,
+            Height = 36,
+            Padding = new Thickness(12, 7, 12, 7),
+            Margin = new Thickness(16, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        newCaseButton.Click += (_, _) => NewCase_Click(this, new RoutedEventArgs());
+        Grid.SetColumn(newCaseButton, 1);
+        headingPanel.Children.Add(newCaseButton);
         DockPanel.SetDock(headingPanel, Dock.Top);
         panel.Children.Add(headingPanel);
 
@@ -1804,8 +1900,64 @@ public partial class MainWindow : Window
                     "GHOST // Update error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
+        var deleteCaseButton = new Button
+        {
+            Content = "DELETE SELECTED",
+            MinWidth = 140,
+            Margin = new Thickness(0, 0, 8, 0),
+            Background = new SolidColorBrush(Color.FromRgb(48, 21, 25)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(122, 49, 56)),
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 150, 156))
+        };
+        deleteCaseButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is not CaseArchiveRow selected)
+            {
+                MessageBox.Show(this, "Select a case to delete.", "GHOST",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var confirmation = MessageBox.Show(
+                this,
+                $"Delete case {selected.CaseNumber} / {selected.Title}?\n\nThis removes its linked database records and connections. Original evidence files stay on disk. This action cannot be undone.",
+                "GHOST // Confirm case deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                using var db = new GhostDbContext();
+                var stored = db.Cases.FirstOrDefault(x => x.Id == selected.Id);
+                if (stored is null)
+                {
+                    RefreshRows();
+                    return;
+                }
+
+                var deleted = DeleteCaseRecords(db, stored, "CASE FILES");
+                RefreshRows();
+                RefreshStats();
+                RefreshNetwork();
+                MessageBox.Show(
+                    this,
+                    $"Case {deleted.CaseNumber} was deleted. Its audit history was retained under its case number, and evidence files were left on disk.",
+                    "GHOST // Case deleted",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"The case could not be deleted.\n\n{ex.Message}",
+                    "GHOST // Delete error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        };
+
         footer.Children.Add(openCaseButton);
         footer.Children.Add(statusButton);
+        footer.Children.Add(deleteCaseButton);
         footer.Children.Add(close);
         DockPanel.SetDock(footer, Dock.Bottom);
         panel.Children.Add(footer);
@@ -2024,18 +2176,31 @@ public partial class MainWindow : Window
         summary.Children.Add(metadata);
 
         var actions = new WrapPanel();
-        var saveButton = new Button { Content = "SAVE CASE DETAILS", MinWidth = 155, Margin = new Thickness(0, 0, 8, 0) };
-        var statusButton = new Button { Content = caseFile.Status == "Closed" ? "REOPEN CASE" : "CLOSE CASE", MinWidth = 115, Margin = new Thickness(0, 0, 8, 0) };
-        var openDigitalLab = new Button { Content = "OPEN DIGITAL LAB", MinWidth = 145, Margin = new Thickness(0, 0, 8, 0) };
-        var openFieldLab = new Button { Content = "OPEN FIELD LAB", MinWidth = 135, Margin = new Thickness(0, 0, 8, 0) };
-        var openEvidence = new Button { Content = "VIEW EVIDENCE", MinWidth = 125, Margin = new Thickness(0, 0, 8, 0) };
-        var openNetwork = new Button { Content = "VIEW NETWORK", MinWidth = 125, Margin = new Thickness(0, 0, 8, 0) };
+        var actionMargin = new Thickness(0, 0, 8, 8);
+        var saveButton = new Button { Content = "SAVE CASE DETAILS", MinWidth = 155, Margin = actionMargin };
+        var statusButton = new Button { Content = caseFile.Status == "Closed" ? "REOPEN CASE" : "CLOSE CASE", MinWidth = 115, Margin = actionMargin };
+        var timelineEntryButton = new Button { Content = "＋ ADD TIMELINE ENTRY", MinWidth = 164, Margin = actionMargin };
+        var openDigitalLab = new Button { Content = "OPEN DIGITAL LAB", MinWidth = 145, Margin = actionMargin };
+        var openFieldLab = new Button { Content = "OPEN FIELD LAB", MinWidth = 135, Margin = actionMargin };
+        var openEvidence = new Button { Content = "VIEW EVIDENCE", MinWidth = 125, Margin = actionMargin };
+        var openNetwork = new Button { Content = "VIEW NETWORK", MinWidth = 125, Margin = actionMargin };
+        var deleteWorkspaceCaseButton = new Button
+        {
+            Content = "DELETE CASE",
+            MinWidth = 115,
+            Margin = actionMargin,
+            Background = new SolidColorBrush(Color.FromRgb(48, 21, 25)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(122, 49, 56)),
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 150, 156))
+        };
         actions.Children.Add(saveButton);
         actions.Children.Add(statusButton);
+        actions.Children.Add(timelineEntryButton);
         actions.Children.Add(openDigitalLab);
         actions.Children.Add(openFieldLab);
         actions.Children.Add(openEvidence);
         actions.Children.Add(openNetwork);
+        actions.Children.Add(deleteWorkspaceCaseButton);
         summary.Children.Add(actions);
         var caseStatusMessage = new TextBlock
         {
@@ -2112,6 +2277,45 @@ public partial class MainWindow : Window
             }
         };
 
+        timelineEntryButton.Click += (_, _) => OpenAddTimelineEntryForm(caseId);
+        deleteWorkspaceCaseButton.Click += (_, _) =>
+        {
+            var confirmation = MessageBox.Show(
+                this,
+                $"Delete case {caseFile.CaseNumber} / {caseFile.Title}?\n\nLinked evidence, experiments, observations, timeline entries, and connections will be removed from the database. Original evidence files remain on disk. This cannot be undone.",
+                "GHOST // Confirm case deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                using var db = new GhostDbContext();
+                var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
+                if (stored is null)
+                {
+                    Cases_Click(this, new RoutedEventArgs());
+                    return;
+                }
+
+                var deleted = DeleteCaseRecords(db, stored, "case workspace");
+                RefreshStats();
+                RefreshNetwork();
+                Cases_Click(this, new RoutedEventArgs());
+                MessageBox.Show(
+                    this,
+                    $"Case {deleted.CaseNumber} was deleted. Historical audit activity was retained and evidence files were left on disk.",
+                    "GHOST // Case deleted",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                caseStatusMessage.Text = $"The case could not be deleted: {ex.Message}";
+            }
+        };
+
         openDigitalLab.Click += (_, _) => DigitalLab_Click(this, new RoutedEventArgs());
         openFieldLab.Click += (_, _) => FieldLab_Click(this, new RoutedEventArgs());
         openEvidence.Click += (_, _) => EvidenceVault_Click(this, new RoutedEventArgs());
@@ -2150,6 +2354,162 @@ public partial class MainWindow : Window
         root.Children.Add(tabs);
 
         ShowModuleView(root, "CASE FILES");
+    }
+
+    private void OpenAddTimelineEntryForm(int caseId)
+    {
+        CaseFile? caseFile;
+        using (var db = new GhostDbContext())
+            caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
+
+        if (caseFile is null)
+        {
+            MessageBox.Show(this, "This case no longer exists. Refresh the case archive.", "GHOST",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            Cases_Click(this, new RoutedEventArgs());
+            return;
+        }
+
+        var root = new Grid { Margin = new Thickness(20) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var heading = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        heading.Children.Add(new TextBlock
+        {
+            Text = "CASE JOURNAL // NEW TIMELINE ENTRY",
+            FontSize = 18,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush")
+        });
+        heading.Children.Add(new TextBlock
+        {
+            Text = $"{caseFile.CaseNumber}  /  {caseFile.Title}  /  timestamp recorded automatically",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        Grid.SetRow(heading, 0);
+        root.Children.Add(heading);
+
+        var content = new StackPanel();
+        content.Children.Add(CreateFormLabel("ENTRY TITLE"));
+        var titleBox = new TextBox
+        {
+            Height = 38,
+            MaxLength = 180,
+            Padding = new Thickness(9, 7, 9, 7),
+            Background = (Brush)FindResource("PanelAltBrush"),
+            Foreground = Brushes.White,
+            BorderBrush = (Brush)FindResource("LineBrush")
+        };
+        content.Children.Add(titleBox);
+        content.Children.Add(CreateFormLabel("DETAILS / OBSERVATIONS"));
+        var detailsBox = new TextBox
+        {
+            Height = 180,
+            Padding = new Thickness(9, 7, 9, 7),
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = (Brush)FindResource("PanelAltBrush"),
+            Foreground = Brushes.White,
+            BorderBrush = (Brush)FindResource("LineBrush")
+        };
+        content.Children.Add(detailsBox);
+
+        var status = new TextBlock
+        {
+            Text = "Entries are timestamped, saved locally, and recorded in the audit history.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        content.Children.Add(status);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 16, 0, 0)
+        };
+        var cancel = new Button
+        {
+            Content = "BACK TO CASE",
+            MinWidth = 120,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        cancel.Click += (_, _) => OpenCaseWorkspace(caseId);
+        var save = new Button
+        {
+            Content = "SAVE TIMELINE ENTRY",
+            MinWidth = 170
+        };
+        save.Click += (_, _) =>
+        {
+            var entryTitle = titleBox.Text.Trim();
+            var details = detailsBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(entryTitle))
+            {
+                status.Text = "Enter a title for this timeline entry.";
+                titleBox.Focus();
+                return;
+            }
+
+            try
+            {
+                using (var db = new GhostDbContext())
+                {
+                    using var transaction = db.Database.BeginTransaction();
+                    var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
+                    if (stored is null)
+                    {
+                        status.Text = "This case no longer exists. Return to the archive and refresh.";
+                        return;
+                    }
+
+                    var occurredAt = DateTime.UtcNow;
+                    stored.UpdatedAt = occurredAt;
+                    db.TimelineEvents.Add(new TimelineEvent
+                    {
+                        CaseFileId = caseId,
+                        Title = entryTitle,
+                        Details = details,
+                        OccurredAt = occurredAt
+                    });
+                    var detailForAudit = details.Length > 180 ? details[..180] + "..." : details;
+                    db.AuditLogs.Add(new AuditEntry
+                    {
+                        EntityType = "Case",
+                        EntityId = caseId,
+                        Action = "Timeline Entry Added",
+                        Details = $"Timeline entry added to case {caseFile.CaseNumber}: {entryTitle}. {detailForAudit}"
+                    });
+                    db.SaveChanges();
+                    transaction.Commit();
+                }
+
+                RefreshStats();
+                RefreshNetwork();
+                OpenCaseWorkspace(caseId);
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Timeline entry could not be saved: {ex.Message}";
+            }
+        };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(save);
+        content.Children.Add(buttons);
+
+        var formCard = CreateModuleCard(content);
+        Grid.SetRow(formCard, 1);
+        root.Children.Add(formCard);
+        ShowModuleView(root, "ADD TIMELINE ENTRY");
+        SetActiveNavigation("Cases");
+        titleBox.Focus();
     }
 
     private TextBlock CreateFormLabel(string text)
@@ -4101,7 +4461,7 @@ public partial class MainWindow : Window
             VerticalContentAlignment = VerticalAlignment.Center,
             ToolTip = "Runs in the shared native PowerShell session with your Windows account permissions."
         };
-        _terminalConsoleInput.KeyDown += DashboardConsoleInput_KeyDown;
+        _terminalConsoleInput.PreviewKeyDown += DashboardConsoleInput_KeyDown;
         Grid.SetColumn(_terminalConsoleInput, 1);
         promptGrid.Children.Add(_terminalConsoleInput);
         var runButton = new Button
@@ -4321,6 +4681,16 @@ public partial class MainWindow : Window
         public string DisplayText =>
             $"{Status.ToUpperInvariant(),-10} | {Category,-16} | {Title} | {CreatedAt}";
     }
+
+    private sealed record CaseDeletionSummary(
+        int CaseId,
+        string CaseNumber,
+        string Title,
+        int EvidenceCount,
+        int ExperimentCount,
+        int ObservationCount,
+        int TimelineEventCount,
+        int RelationshipCount);
 
     private sealed record RecentCaseSummary(
         int Id,
