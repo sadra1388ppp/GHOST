@@ -50,22 +50,28 @@ Acceptance: the app never edits the original file; an import is traceable; re-ve
 
 ## Stage 3 — Digital Lab
 
-- [ ] Create experiment records linked to a case
-- [ ] Record objective, method/procedure, tools, start/end timestamps, status, result, and notes
-- [ ] Add observations to an experiment and optionally associate relevant evidence
-- [ ] Add safe, deterministic utilities first: SHA-256, file metadata, text/log viewing, and structured notes
+- [x] Create experiment records linked to a case
+- [x] Record hypothesis/objective, procedure, category, status, and results
+- [x] Add observations to an experiment with optional numeric value and unit
+- [x] Record experiment/observation changes in audit history and create timeline events
+- [x] Show saved experiments and observations in the Investigation Network
+- [ ] Record tools and start/end timestamps
+- [ ] Associate evidence files with experiments
+- [ ] Add safe, deterministic utilities: SHA-256, file metadata, text/log viewing, and structured notes
 - [ ] Never execute untrusted evidence or arbitrary shell commands as a default action
-- [ ] Make experiment and observation records visible in the Investigation Network and case timeline
 
 Acceptance: every experiment and observation is persisted, searchable, tied to a case when applicable, and represented accurately in linked records.
 
 ## Stage 4 — Field Lab
 
-- [ ] Record field notes with occurred/recorded timestamps, optional location text, observer, conditions, and narrative
-- [ ] Record named measurements with value and unit, method, and optional uncertainty
-- [ ] Attach evidence files using the same Evidence Vault workflow
+- [x] Create case-linked field notes with a timestamp and optional location
+- [x] Record basic field measurements with an optional numeric value and unit
+- [x] Write field note/measurement entries into the case timeline and audit log
+- [ ] Add dedicated field record types, separate occurred/recorded times, observer, conditions, and method
+- [ ] Attach evidence files using the Evidence Vault workflow
 - [ ] Edit entries with an audit trail and flag corrections rather than silently rewriting the past
-- [ ] Support offline use with no external account or network requirement
+- [x] Support offline use with no external account or network requirement
+- Note: the current basic Field Lab stores field entries as timeline events. This is a usable first pass, not the final dedicated data model.
 
 Acceptance: a field note or measurement retains when it happened, when it was recorded, who recorded it when available, and any correction history.
 
