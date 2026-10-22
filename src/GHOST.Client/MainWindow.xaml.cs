@@ -8,6 +8,8 @@ using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.IO;
@@ -48,6 +50,23 @@ public partial class MainWindow : Window
     private Process? _dashboardPowerShellProcess;
     private readonly List<string> _dashboardConsoleHistory = [];
     private int _dashboardConsoleHistoryIndex;
+    private string _dashboardConsoleHistoryDraft = string.Empty;
+    private bool _isTerminalModuleActive;
+    private StackPanel? _terminalConsoleOutputPanel;
+    private ScrollViewer? _terminalConsoleScrollViewer;
+    private TextBox? _terminalConsoleInput;
+    private TextBlock? _terminalConsolePromptText;
+    private TextBlock? _terminalConsoleStatusText;
+    private TextBlock? _terminalConsoleHostText;
+    private StackPanel? _terminalCommandListPanel;
+    private TextBox? _terminalCommandNameInput;
+    private TextBox? _terminalCommandScriptInput;
+    private TextBlock? _terminalCommandEditorStatus;
+    private readonly List<ConsoleTranscriptEntry> _consoleTranscript = [];
+    private readonly List<GhostCustomCommand> _customCommands = [];
+    private bool _customCommandsLoaded;
+    private string GhostCustomCommandsPath => IOPath.Combine(GetGhostDataDirectory(), "custom-commands.json");
+    private string PowerShellHistoryPath => IOPath.Combine(GetGhostDataDirectory(), "PowerShellHistory.txt");
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
@@ -88,6 +107,7 @@ public partial class MainWindow : Window
 
     private void ShowModuleView(UIElement content, string title)
     {
+        _isTerminalModuleActive = string.Equals(title, "GHOST TERMINAL", StringComparison.OrdinalIgnoreCase);
         SetActiveNavigation(title switch
         {
             "CASE FILES" or "NEW CASE" => "Cases",
@@ -180,9 +200,11 @@ public partial class MainWindow : Window
 
     private void InitializeDashboardConsole()
     {
+        ClearConsoleTranscript();
+        LoadGhostCustomCommands();
+        LoadPowerShellHistory();
         DashboardConsoleHostText.Text =
             $"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS";
-        DashboardConsoleOutputPanel.Children.Clear();
         AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
             Color.FromRgb(245, 196, 106));
@@ -196,7 +218,7 @@ public partial class MainWindow : Window
     {
         if (_dashboardPowerShellProcess is { HasExited: false })
         {
-            DashboardConsoleStatusText.Text = "CONNECTED";
+            SetGhostConsoleStatus("CONNECTED");
             return;
         }
 
@@ -247,7 +269,7 @@ public partial class MainWindow : Window
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (ReferenceEquals(_dashboardPowerShellProcess, process))
-                            DashboardConsolePromptText.Text = $"PS {currentPath}>";
+                            SetGhostConsolePrompt($"PS {currentPath}>");
                     }));
                     return;
                 }
@@ -288,8 +310,7 @@ public partial class MainWindow : Window
                     if (!ReferenceEquals(_dashboardPowerShellProcess, process))
                         return;
 
-                    DashboardConsoleStatusText.Text = "STOPPED";
-                    DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+                    SetGhostConsoleStatus("STOPPED", Color.FromRgb(255, 142, 142));
                     AddDashboardConsoleLine(
                         $"PowerShell exited (code {exitCode}). Press RESTART to open a new session.",
                         Color.FromRgb(255, 177, 107), true);
@@ -306,16 +327,14 @@ public partial class MainWindow : Window
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            DashboardConsoleStatusText.Text = IOPath.GetFileNameWithoutExtension(executable).ToUpperInvariant();
-            DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(99, 255, 160));
-            DashboardConsolePromptText.Text = $"PS {workingDirectory}>";
+            SetGhostConsoleStatus(IOPath.GetFileNameWithoutExtension(executable).ToUpperInvariant());
+            SetGhostConsolePrompt($"PS {workingDirectory}>");
             AddDashboardConsoleLine($"Connected: {executable}", Color.FromRgb(99, 255, 160), true);
             AddDashboardConsoleLine($"Working directory: {workingDirectory}", Color.FromRgb(136, 171, 148));
         }
         catch (Exception ex)
         {
-            DashboardConsoleStatusText.Text = "START FAILED";
-            DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+            SetGhostConsoleStatus("START FAILED", Color.FromRgb(255, 142, 142));
             AddDashboardConsoleLine($"Could not start PowerShell: {ex.Message}",
                 Color.FromRgb(255, 142, 142), true);
             AddDashboardConsoleLine("Install Windows PowerShell (included with Windows) or PowerShell 7, then press RESTART.",
@@ -370,27 +389,33 @@ public partial class MainWindow : Window
             string.IsNullOrWhiteSpace(command))
             return;
 
-        DashboardConsoleInput.Text = command;
-        ExecuteDashboardPowerShellCommand();
-        DashboardConsoleInput.Focus();
+        var input = GetCurrentConsoleInput();
+        input.Text = command;
+        ExecuteDashboardPowerShellCommand(input);
+        input.Focus();
     }
 
     private void DashboardConsoleInput_KeyDown(object sender, KeyEventArgs e)
     {
+        var input = sender as TextBox ?? GetCurrentConsoleInput();
+
         if (e.Key == Key.Enter)
         {
-            ExecuteDashboardPowerShellCommand();
+            ExecuteDashboardPowerShellCommand(input);
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.Up && _dashboardConsoleHistory.Count > 0)
         {
+            if (_dashboardConsoleHistoryIndex >= _dashboardConsoleHistory.Count)
+                _dashboardConsoleHistoryDraft = input.Text;
+
             if (_dashboardConsoleHistoryIndex > 0)
                 _dashboardConsoleHistoryIndex--;
 
-            DashboardConsoleInput.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
-            DashboardConsoleInput.CaretIndex = DashboardConsoleInput.Text.Length;
+            input.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
+            input.CaretIndex = input.Text.Length;
             e.Handled = true;
             return;
         }
@@ -400,51 +425,55 @@ public partial class MainWindow : Window
             if (_dashboardConsoleHistoryIndex < _dashboardConsoleHistory.Count - 1)
             {
                 _dashboardConsoleHistoryIndex++;
-                DashboardConsoleInput.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
+                input.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
             }
             else
             {
                 _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
-                DashboardConsoleInput.Clear();
+                input.Text = _dashboardConsoleHistoryDraft;
             }
 
-            DashboardConsoleInput.CaretIndex = DashboardConsoleInput.Text.Length;
+            input.CaretIndex = input.Text.Length;
             e.Handled = true;
         }
     }
 
     private void DashboardConsoleRun_Click(object sender, RoutedEventArgs e)
-        => ExecuteDashboardPowerShellCommand();
+        => ExecuteDashboardPowerShellCommand(GetCurrentConsoleInput());
 
     private void DashboardConsoleRestart_Click(object sender, RoutedEventArgs e)
     {
         StopDashboardPowerShell();
-        DashboardConsoleOutputPanel.Children.Clear();
+        ClearConsoleTranscript();
         _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+        _dashboardConsoleHistoryDraft = string.Empty;
         StartDashboardPowerShell();
     }
 
-    private void ExecuteDashboardPowerShellCommand()
+    private void ExecuteDashboardPowerShellCommand(TextBox? sourceInput = null)
     {
-        var command = DashboardConsoleInput.Text.TrimEnd();
+        var input = sourceInput ?? GetCurrentConsoleInput();
+        var command = input.Text.TrimEnd();
         if (string.IsNullOrWhiteSpace(command))
             return;
 
-        DashboardConsoleInput.Clear();
+        input.Clear();
         if (_dashboardConsoleHistory.Count == 0 ||
             !string.Equals(_dashboardConsoleHistory[^1], command, StringComparison.Ordinal))
         {
             _dashboardConsoleHistory.Add(command);
             if (_dashboardConsoleHistory.Count > 500)
                 _dashboardConsoleHistory.RemoveAt(0);
+            SavePowerShellHistory();
         }
 
         _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+        _dashboardConsoleHistoryDraft = string.Empty;
 
         if (string.Equals(command.Trim(), "clear", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(command.Trim(), "cls", StringComparison.OrdinalIgnoreCase))
         {
-            DashboardConsoleOutputPanel.Children.Clear();
+            ClearConsoleTranscript();
             AddDashboardConsoleLine("Console cleared.", Color.FromRgb(136, 171, 148));
             return;
         }
@@ -452,7 +481,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine($"{DashboardConsolePromptText.Text} {command}",
             Color.FromRgb(99, 255, 160), true);
 
-        if (TryExecuteGhostApplicationCommand(command))
+        if (TryExecuteGhostApplicationCommand(command) || TryExecuteGhostCustomCommand(command))
             return;
 
         var process = _dashboardPowerShellProcess;
@@ -474,6 +503,11 @@ public partial class MainWindow : Window
                 Color.FromRgb(255, 142, 142), true);
         }
     }
+
+    private TextBox GetCurrentConsoleInput() =>
+        _isTerminalModuleActive && _terminalConsoleInput is not null
+            ? _terminalConsoleInput
+            : DashboardConsoleInput;
 
     private bool TryExecuteGhostApplicationCommand(string input)
     {
@@ -516,6 +550,13 @@ public partial class MainWindow : Window
             case "open":
                 RunGhostReadCommand("open", () => ExecuteGhostOpen(parts));
                 break;
+            case "commands":
+                ExecuteGhostCustomCommandList();
+                break;
+            case "run":
+                RunGhostReadCommand("run", () => ExecuteGhostCustomCommandByName(
+                    parts.Length > 2 ? parts[2] : string.Empty));
+                break;
             default:
                 AddDashboardConsoleLine(
                     $"Unknown GHOST command: '{command}'. Type 'ghost help' to list the 10 built-in commands.",
@@ -539,8 +580,10 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("ghost vault             Check evidence file presence + SHA-256 metadata", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost db                SQLite integrity + database size", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost open <id|number>  Open a case inside GHOST", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("These GHOST commands read local records; 'open' only changes the current app view.",
-            Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine("ghost commands          List your saved custom commands", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost run <name>        Run a saved custom command", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("Custom commands run PowerShell scripts with your Windows account permissions.",
+            Color.FromRgb(245, 196, 106));
     }
 
     private void RunGhostReadCommand(string commandName, Action action)
@@ -864,33 +907,87 @@ public partial class MainWindow : Window
             process.Dispose();
         }
 
-        DashboardConsoleStatusText.Text = "STOPPED";
+        SetGhostConsoleStatus("STOPPED", Color.FromRgb(255, 142, 142));
     }
 
     private void AddDashboardConsoleLine(string text, Color color, bool isBold = false)
     {
+        var entry = new ConsoleTranscriptEntry(text, color, isBold);
+        _consoleTranscript.Add(entry);
+        const int maxConsoleLines = 1000;
+        if (_consoleTranscript.Count > maxConsoleLines)
+            _consoleTranscript.RemoveAt(0);
+
+        RenderConsoleLine(DashboardConsoleOutputPanel, DashboardConsoleScrollViewer, entry);
+        if (_terminalConsoleOutputPanel is not null && _terminalConsoleScrollViewer is not null)
+            RenderConsoleLine(_terminalConsoleOutputPanel, _terminalConsoleScrollViewer, entry);
+    }
+
+    private void RenderConsoleLine(StackPanel panel, ScrollViewer scrollViewer, ConsoleTranscriptEntry entry)
+    {
         var line = new TextBlock
         {
-            Text = text,
+            Text = entry.Text,
             FontFamily = (FontFamily)FindResource("HackerFont"),
             FontSize = 9,
-            Foreground = new SolidColorBrush(color),
-            FontWeight = isBold ? FontWeights.SemiBold : FontWeights.Normal,
+            Foreground = new SolidColorBrush(entry.Color),
+            FontWeight = entry.IsBold ? FontWeights.SemiBold : FontWeights.Normal,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 3)
         };
-
-        DashboardConsoleOutputPanel.Children.Add(line);
+        panel.Children.Add(line);
 
         const int maxConsoleLines = 1000;
-        while (DashboardConsoleOutputPanel.Children.Count > maxConsoleLines)
-            DashboardConsoleOutputPanel.Children.RemoveAt(0);
+        while (panel.Children.Count > maxConsoleLines)
+            panel.Children.RemoveAt(0);
 
-        DashboardConsoleScrollViewer.ScrollToEnd();
+        scrollViewer.ScrollToEnd();
+    }
+
+    private void ReplayConsoleTranscript(StackPanel panel, ScrollViewer scrollViewer)
+    {
+        panel.Children.Clear();
+        foreach (var entry in _consoleTranscript)
+            RenderConsoleLine(panel, scrollViewer, entry);
+    }
+
+    private void ClearConsoleTranscript()
+    {
+        _consoleTranscript.Clear();
+        DashboardConsoleOutputPanel.Children.Clear();
+        if (_terminalConsoleOutputPanel is not null)
+            _terminalConsoleOutputPanel.Children.Clear();
+    }
+
+    private void SetGhostConsoleStatus(string status, Color? color = null)
+    {
+        var brush = new SolidColorBrush(color ?? Color.FromRgb(99, 255, 160));
+        DashboardConsoleStatusText.Text = status;
+        DashboardConsoleStatusText.Foreground = brush;
+        if (_terminalConsoleStatusText is not null)
+        {
+            _terminalConsoleStatusText.Text = status;
+            _terminalConsoleStatusText.Foreground = new SolidColorBrush(brush.Color);
+        }
+    }
+
+    private void SetGhostConsolePrompt(string prompt)
+    {
+        DashboardConsolePromptText.Text = prompt;
+        if (_terminalConsolePromptText is not null)
+            _terminalConsolePromptText.Text = prompt;
+    }
+
+    private void SetGhostConsoleHost(string host)
+    {
+        DashboardConsoleHostText.Text = host;
+        if (_terminalConsoleHostText is not null)
+            _terminalConsoleHostText.Text = host;
     }
 
     private void Dashboard_Click(object sender, RoutedEventArgs e)
     {
+        _isTerminalModuleActive = false;
         SetActiveNavigation("Dashboard");
         NetworkView.Visibility = Visibility.Collapsed;
         ModuleView.Visibility = Visibility.Collapsed;
@@ -3608,27 +3705,693 @@ public partial class MainWindow : Window
         RefreshRows();
     }
 
-    private void Terminal_Click(object sender, RoutedEventArgs e)
+    private UIElement BuildGhostTerminalView()
     {
-        var panel = new StackPanel { Margin = new Thickness(8) };
-        panel.Children.Add(new TextBlock
+        LoadGhostCustomCommands();
+
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(300) });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var managerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+        managerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.9, GridUnitType.Star) });
+        managerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+
+        var editorPanel = new StackPanel { Margin = new Thickness(12) };
+        editorPanel.Children.Add(new TextBlock
         {
-            Text = "LOCAL CONSOLE // NOT ACTIVE",
-            FontSize = 16,
+            Text = "CUSTOM COMMAND BUILDER",
             Foreground = (Brush)FindResource("NeonBrush"),
-            Margin = new Thickness(0, 0, 0, 12)
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8)
         });
-        panel.Children.Add(new TextBlock
+        editorPanel.Children.Add(new TextBlock
         {
-            Text = "The terminal module is not implemented yet. This view does not execute system shell commands.",
-            FontSize = 10,
+            Text = "COMMAND NAME",
             Foreground = (Brush)FindResource("MutedBrush"),
-            TextWrapping = TextWrapping.Wrap
+            FontSize = 8,
+            Margin = new Thickness(0, 0, 0, 4)
         });
-        ShowModuleView(panel, "GHOST TERMINAL");
+
+        _terminalCommandNameInput = new TextBox
+        {
+            Height = 27,
+            Padding = new Thickness(7, 4, 7, 3),
+            Background = new SolidColorBrush(Color.FromRgb(5, 9, 6)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+            BorderThickness = new Thickness(1),
+            Foreground = new SolidColorBrush(Color.FromRgb(200, 248, 212)),
+            CaretBrush = new SolidColorBrush(Color.FromRgb(99, 255, 160)),
+            FontSize = 10,
+            ToolTip = "Use one word: letters, numbers, underscores, and hyphens."
+        };
+        editorPanel.Children.Add(_terminalCommandNameInput);
+        editorPanel.Children.Add(new TextBlock
+        {
+            Text = "POWERSHELL SCRIPT",
+            Foreground = (Brush)FindResource("MutedBrush"),
+            FontSize = 8,
+            Margin = new Thickness(0, 9, 0, 4)
+        });
+
+        _terminalCommandScriptInput = new TextBox
+        {
+            Height = 112,
+            Padding = new Thickness(7, 6, 7, 6),
+            AcceptsReturn = true,
+            AcceptsTab = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = new SolidColorBrush(Color.FromRgb(5, 9, 6)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+            BorderThickness = new Thickness(1),
+            Foreground = new SolidColorBrush(Color.FromRgb(200, 248, 212)),
+            CaretBrush = new SolidColorBrush(Color.FromRgb(99, 255, 160)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 9,
+            ToolTip = "This PowerShell script runs locally with your Windows account permissions."
+        };
+        editorPanel.Children.Add(_terminalCommandScriptInput);
+
+        var editorActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        var saveCommandButton = new Button
+        {
+            Content = "SAVE COMMAND",
+            Padding = new Thickness(11, 6, 11, 6),
+            FontSize = 8,
+            Background = new SolidColorBrush(Color.FromRgb(20, 41, 26)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(44, 104, 64)),
+            Foreground = new SolidColorBrush(Color.FromRgb(143, 255, 177))
+        };
+        saveCommandButton.Click += SaveGhostCustomCommand_Click;
+        editorActions.Children.Add(saveCommandButton);
+        var clearEditorButton = new Button
+        {
+            Content = "CLEAR FORM",
+            Padding = new Thickness(10, 6, 10, 6),
+            FontSize = 8,
+            Margin = new Thickness(7, 0, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(14, 24, 17)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(43, 66, 49)),
+            Foreground = new SolidColorBrush(Color.FromRgb(170, 196, 177))
+        };
+        clearEditorButton.Click += (_, _) =>
+        {
+            _terminalCommandNameInput?.Clear();
+            _terminalCommandScriptInput?.Clear();
+            SetGhostCommandEditorStatus("READY // Commands are stored on this device.");
+        };
+        editorActions.Children.Add(clearEditorButton);
+        editorPanel.Children.Add(editorActions);
+
+        _terminalCommandEditorStatus = new TextBlock
+        {
+            Text = "READY // Commands are stored on this device.",
+            FontSize = 8,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(0, 7, 0, 0)
+        };
+        editorPanel.Children.Add(_terminalCommandEditorStatus);
+
+        var editorBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(8, 18, 12)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(38, 75, 49)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(0, 0, 8, 0),
+            Child = editorPanel
+        };
+        Grid.SetColumn(editorBorder, 0);
+        managerGrid.Children.Add(editorBorder);
+
+        var libraryGrid = new Grid { Margin = new Thickness(12) };
+        libraryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        libraryGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        libraryGrid.Children.Add(new TextBlock
+        {
+            Text = "SAVED COMMANDS",
+            Foreground = (Brush)FindResource("NeonBrush"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        _terminalCommandListPanel = new StackPanel();
+        var commandScroll = new ScrollViewer
+        {
+            Content = _terminalCommandListPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        Grid.SetRow(commandScroll, 1);
+        libraryGrid.Children.Add(commandScroll);
+        var libraryBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(8, 18, 12)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(38, 75, 49)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(8, 0, 0, 0),
+            Child = libraryGrid
+        };
+        Grid.SetColumn(libraryBorder, 1);
+        managerGrid.Children.Add(libraryBorder);
+        root.Children.Add(managerGrid);
+
+        var shellBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(5, 9, 6)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(41, 106, 62)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            ClipToBounds = true
+        };
+        var shellGrid = new Grid();
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40) });
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(26) });
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(30) });
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        shellGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(18) });
+
+        var titleBar = new DockPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(13, 23, 15)),
+            LastChildFill = true
+        };
+        var restartButton = new Button
+        {
+            Content = "RESTART",
+            Padding = new Thickness(9, 4, 9, 4),
+            FontSize = 8,
+            Margin = new Thickness(0, 4, 8, 4),
+            Background = new SolidColorBrush(Color.FromRgb(20, 41, 26)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(44, 104, 64)),
+            Foreground = new SolidColorBrush(Color.FromRgb(143, 255, 177))
+        };
+        restartButton.Click += DashboardConsoleRestart_Click;
+        DockPanel.SetDock(restartButton, Dock.Right);
+        titleBar.Children.Add(restartButton);
+        titleBar.Children.Add(new TextBlock
+        {
+            Text = "GHOST SHELL  /  NATIVE POWERSHELL",
+            Foreground = new SolidColorBrush(Color.FromRgb(99, 255, 160)),
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(12, 0, 0, 0)
+        });
+        shellGrid.Children.Add(titleBar);
+
+        var telemetry = new DockPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(7, 16, 9)),
+            LastChildFill = false,
+            Margin = new Thickness(10, 0, 10, 0)
+        };
+        _terminalConsoleHostText = new TextBlock
+        {
+            Text = $"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS",
+            Foreground = new SolidColorBrush(Color.FromRgb(136, 171, 148)),
+            FontSize = 8,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        telemetry.Children.Add(_terminalConsoleHostText);
+        _terminalConsoleStatusText = new TextBlock
+        {
+            Text = _dashboardPowerShellProcess is { HasExited: false } ? "CONNECTED" : "STOPPED",
+            Foreground = new SolidColorBrush(_dashboardPowerShellProcess is { HasExited: false }
+                ? Color.FromRgb(99, 255, 160) : Color.FromRgb(255, 142, 142)),
+            FontSize = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 0, 0)
+        };
+        DockPanel.SetDock(_terminalConsoleStatusText, Dock.Right);
+        telemetry.Children.Add(_terminalConsoleStatusText);
+        Grid.SetRow(telemetry, 1);
+        shellGrid.Children.Add(telemetry);
+
+        var quickActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(9, 4, 9, 4)
+        };
+        foreach (var quickCommand in new[]
+        {
+            ("LOCATION", "Get-Location"),
+            ("PROCESSES", "Get-Process | Select-Object -First 5"),
+            ("FILES", "Get-ChildItem -Force | Select-Object -First 8"),
+            ("VERSION", "$PSVersionTable")
+        })
+        {
+            var quickButton = new Button
+            {
+                Content = quickCommand.Item1,
+                Tag = quickCommand.Item2,
+                Padding = new Thickness(8, 4, 8, 4),
+                Margin = new Thickness(0, 0, 6, 0),
+                FontSize = 8,
+                Background = new SolidColorBrush(Color.FromRgb(13, 29, 18)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+                Foreground = new SolidColorBrush(Color.FromRgb(170, 220, 184))
+            };
+            quickButton.Click += (_, _) =>
+            {
+                if (_terminalConsoleInput is null)
+                    return;
+                _terminalConsoleInput.Text = quickCommand.Item2;
+                ExecuteDashboardPowerShellCommand(_terminalConsoleInput);
+                _terminalConsoleInput.Focus();
+            };
+            quickActions.Children.Add(quickButton);
+        }
+        Grid.SetRow(quickActions, 2);
+        shellGrid.Children.Add(quickActions);
+
+        _terminalConsoleOutputPanel = new StackPanel { Margin = new Thickness(11, 8, 9, 3) };
+        _terminalConsoleScrollViewer = new ScrollViewer
+        {
+            Content = _terminalConsoleOutputPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        Grid.SetRow(_terminalConsoleScrollViewer, 3);
+        shellGrid.Children.Add(_terminalConsoleScrollViewer);
+
+        var promptBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(10, 20, 13)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(42, 87, 56)),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(9, 7, 9, 7)
+        };
+        var promptGrid = new Grid();
+        promptGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        promptGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        promptGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _terminalConsolePromptText = new TextBlock
+        {
+            Text = DashboardConsolePromptText.Text,
+            FontSize = 10,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(99, 255, 160)),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        promptGrid.Children.Add(_terminalConsolePromptText);
+        _terminalConsoleInput = new TextBox
+        {
+            Height = 28,
+            Padding = new Thickness(7, 4, 7, 4),
+            Background = new SolidColorBrush(Color.FromRgb(5, 9, 6)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+            BorderThickness = new Thickness(1),
+            Foreground = new SolidColorBrush(Color.FromRgb(200, 248, 212)),
+            CaretBrush = new SolidColorBrush(Color.FromRgb(99, 255, 160)),
+            FontSize = 9,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            ToolTip = "Runs in the shared native PowerShell session with your Windows account permissions."
+        };
+        _terminalConsoleInput.KeyDown += DashboardConsoleInput_KeyDown;
+        Grid.SetColumn(_terminalConsoleInput, 1);
+        promptGrid.Children.Add(_terminalConsoleInput);
+        var runButton = new Button
+        {
+            Content = "RUN  ↵",
+            Padding = new Thickness(9, 5, 9, 5),
+            FontSize = 8,
+            Margin = new Thickness(6, 0, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(20, 41, 26)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(44, 104, 64)),
+            Foreground = new SolidColorBrush(Color.FromRgb(143, 255, 177))
+        };
+        runButton.Click += (_, _) =>
+        {
+            if (_terminalConsoleInput is not null)
+                ExecuteDashboardPowerShellCommand(_terminalConsoleInput);
+        };
+        Grid.SetColumn(runButton, 2);
+        promptGrid.Children.Add(runButton);
+        promptBorder.Child = promptGrid;
+        Grid.SetRow(promptBorder, 4);
+        shellGrid.Children.Add(promptBorder);
+
+        var footer = new DockPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(7, 16, 9)),
+            Margin = new Thickness(10, 0, 10, 0)
+        };
+        footer.Children.Add(new TextBlock
+        {
+            Text = "NATIVE POWERSHELL  //  SHARED SESSION + HISTORY  //  CUSTOM SCRIPTS RUN AS YOUR WINDOWS USER",
+            FontSize = 7,
+            Foreground = new SolidColorBrush(Color.FromRgb(111, 157, 123)),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        Grid.SetRow(footer, 5);
+        shellGrid.Children.Add(footer);
+        shellBorder.Child = shellGrid;
+        Grid.SetRow(shellBorder, 1);
+        root.Children.Add(shellBorder);
+
+        SetGhostConsoleHost($"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS");
+        SetGhostConsolePrompt(DashboardConsolePromptText.Text);
+        if (_dashboardPowerShellProcess is { HasExited: false })
+            SetGhostConsoleStatus("CONNECTED");
+        else
+            SetGhostConsoleStatus("STOPPED", Color.FromRgb(255, 142, 142));
+
+        ReplayConsoleTranscript(_terminalConsoleOutputPanel, _terminalConsoleScrollViewer);
+        RefreshGhostCustomCommandList();
+        return root;
     }
 
+    private void Terminal_Click(object sender, RoutedEventArgs e)
+    {
+        var panel = BuildGhostTerminalView();
+        ShowModuleView(panel, "GHOST TERMINAL");
+        Dispatcher.BeginInvoke(new Action(() => _terminalConsoleInput?.Focus()));
+    }
 
+    private void SaveGhostCustomCommand_Click(object sender, RoutedEventArgs e)
+    {
+        if (_terminalCommandNameInput is null || _terminalCommandScriptInput is null)
+            return;
+
+        var name = _terminalCommandNameInput.Text.Trim();
+        var script = _terminalCommandScriptInput.Text.Trim();
+        if (!Regex.IsMatch(name, @"^[A-Za-z][A-Za-z0-9_-]{0,31}$") ||
+            string.Equals(name, "ghost", StringComparison.OrdinalIgnoreCase))
+        {
+            SetGhostCommandEditorStatus("INVALID NAME // use a single word (letters, numbers, _ or -).");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(script))
+        {
+            SetGhostCommandEditorStatus("SCRIPT REQUIRED // enter the PowerShell commands to run.");
+            return;
+        }
+
+        var existingIndex = _customCommands.FindIndex(x =>
+            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (existingIndex >= 0)
+            _customCommands[existingIndex] = new GhostCustomCommand(name, script);
+        else
+            _customCommands.Add(new GhostCustomCommand(name, script));
+
+        if (!PersistGhostCustomCommands())
+            return;
+
+        SetGhostCommandEditorStatus($"SAVED // type '{name}' or run 'ghost run {name}'.");
+        RefreshGhostCustomCommandList();
+    }
+
+    private void SetGhostCommandEditorStatus(string message)
+    {
+        if (_terminalCommandEditorStatus is not null)
+            _terminalCommandEditorStatus.Text = message;
+    }
+
+    private void LoadGhostCustomCommands()
+    {
+        if (_customCommandsLoaded)
+            return;
+
+        _customCommandsLoaded = true;
+        try
+        {
+            if (!File.Exists(GhostCustomCommandsPath))
+                return;
+
+            var loaded = JsonSerializer.Deserialize<List<GhostCustomCommand>>(
+                File.ReadAllText(GhostCustomCommandsPath)) ?? [];
+            foreach (var item in loaded)
+            {
+                if (item is null ||
+                    !Regex.IsMatch(item.Name ?? string.Empty, @"^[A-Za-z][A-Za-z0-9_-]{0,31}$") ||
+                    string.Equals(item.Name, "ghost", StringComparison.OrdinalIgnoreCase) ||
+                    string.IsNullOrWhiteSpace(item.Script))
+                    continue;
+
+                var existingIndex = _customCommands.FindIndex(x =>
+                    string.Equals(x.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+                if (existingIndex >= 0)
+                    _customCommands[existingIndex] = item;
+                else
+                    _customCommands.Add(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine($"Could not load custom commands: {ex.Message}",
+                Color.FromRgb(255, 142, 142), true);
+        }
+    }
+
+    private bool PersistGhostCustomCommands()
+    {
+        try
+        {
+            Directory.CreateDirectory(GetGhostDataDirectory());
+            var temporaryPath = GhostCustomCommandsPath + ".tmp";
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(
+                _customCommands, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(temporaryPath, GhostCustomCommandsPath, overwrite: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            SetGhostCommandEditorStatus($"SAVE FAILED // {ex.Message}");
+            return false;
+        }
+    }
+
+    private void RefreshGhostCustomCommandList()
+    {
+        if (_terminalCommandListPanel is null)
+            return;
+
+        _terminalCommandListPanel.Children.Clear();
+        if (_customCommands.Count == 0)
+        {
+            _terminalCommandListPanel.Children.Add(new TextBlock
+            {
+                Text = "NO CUSTOM COMMANDS YET // Create one on the left.",
+                Foreground = (Brush)FindResource("MutedBrush"),
+                FontSize = 9,
+                Margin = new Thickness(3, 8, 3, 0)
+            });
+            return;
+        }
+
+        foreach (var customCommand in _customCommands.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(105) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var nameText = new TextBlock
+            {
+                Text = customCommand.Name,
+                Foreground = (Brush)FindResource("NeonBrush"),
+                FontSize = 10,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(2, 0, 5, 0)
+            };
+            Grid.SetColumn(nameText, 0);
+            row.Children.Add(nameText);
+
+            var scriptPreview = customCommand.Script.Replace("\r", string.Empty).Replace("\n", " ↵ ");
+            if (scriptPreview.Length > 64)
+                scriptPreview = scriptPreview[..61] + "...";
+            var description = new TextBlock
+            {
+                Text = scriptPreview,
+                Foreground = (Brush)FindResource("MutedBrush"),
+                FontSize = 8,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = customCommand.Script,
+                Margin = new Thickness(0, 0, 5, 0)
+            };
+            Grid.SetColumn(description, 1);
+            row.Children.Add(description);
+
+            Button MakeSmallButton(string caption, string tooltip) => new()
+            {
+                Content = caption,
+                ToolTip = tooltip,
+                Padding = new Thickness(6, 4, 6, 4),
+                Margin = new Thickness(3, 0, 0, 0),
+                FontSize = 7,
+                Background = new SolidColorBrush(Color.FromRgb(13, 29, 18)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+                Foreground = new SolidColorBrush(Color.FromRgb(170, 220, 184))
+            };
+
+            var editButton = MakeSmallButton("EDIT", "Load this command into the editor");
+            editButton.Click += (_, _) =>
+            {
+                if (_terminalCommandNameInput is not null)
+                    _terminalCommandNameInput.Text = customCommand.Name;
+                if (_terminalCommandScriptInput is not null)
+                    _terminalCommandScriptInput.Text = customCommand.Script;
+                SetGhostCommandEditorStatus($"EDITING // {customCommand.Name}");
+            };
+            Grid.SetColumn(editButton, 2);
+            row.Children.Add(editButton);
+
+            var runButton = MakeSmallButton("RUN", "Run this custom command in the shared PowerShell session");
+            runButton.Click += (_, _) => RunGhostCustomCommandByName(customCommand.Name);
+            Grid.SetColumn(runButton, 3);
+            row.Children.Add(runButton);
+
+            var deleteButton = MakeSmallButton("DEL", "Delete this saved command");
+            deleteButton.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+            deleteButton.Click += (_, _) =>
+            {
+                _customCommands.RemoveAll(x =>
+                    string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase));
+                if (PersistGhostCustomCommands())
+                {
+                    RefreshGhostCustomCommandList();
+                    SetGhostCommandEditorStatus($"DELETED // {customCommand.Name}");
+                }
+            };
+            Grid.SetColumn(deleteButton, 4);
+            row.Children.Add(deleteButton);
+
+            _terminalCommandListPanel.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(10, 22, 14)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(29, 53, 35)),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Padding = new Thickness(2, 5, 2, 5),
+                Child = row
+            });
+        }
+    }
+
+    private void LoadPowerShellHistory()
+    {
+        try
+        {
+            if (File.Exists(PowerShellHistoryPath))
+            {
+                _dashboardConsoleHistory.Clear();
+                _dashboardConsoleHistory.AddRange(File.ReadAllLines(PowerShellHistoryPath)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .TakeLast(500));
+            }
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine($"PowerShell history could not be loaded: {ex.Message}",
+                Color.FromRgb(255, 177, 107));
+        }
+
+        _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+    }
+
+    private void SavePowerShellHistory()
+    {
+        try
+        {
+            Directory.CreateDirectory(GetGhostDataDirectory());
+            File.WriteAllLines(PowerShellHistoryPath, _dashboardConsoleHistory.TakeLast(500));
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine($"PowerShell history could not be saved: {ex.Message}",
+                Color.FromRgb(255, 177, 107));
+        }
+    }
+
+    private void ExecuteGhostCustomCommandList()
+    {
+        LoadGhostCustomCommands();
+        AddDashboardConsoleLine($"CUSTOM COMMANDS // {_customCommands.Count} SAVED",
+            Color.FromRgb(99, 255, 160), true);
+        if (_customCommands.Count == 0)
+        {
+            AddDashboardConsoleLine("No custom commands yet. Open GHOST TERMINAL and use CUSTOM COMMAND BUILDER.",
+                Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        foreach (var item in _customCommands.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+            AddDashboardConsoleLine($"{item.Name}  //  {item.Script.Replace("\r", string.Empty).Replace("\n", " ↵ ")}",
+                Color.FromRgb(191, 255, 208));
+    }
+
+    private bool TryExecuteGhostCustomCommand(string input)
+    {
+        LoadGhostCustomCommands();
+        var firstToken = input.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? string.Empty;
+        var command = _customCommands.FirstOrDefault(x =>
+            string.Equals(x.Name, firstToken, StringComparison.OrdinalIgnoreCase));
+        if (command is null)
+            return false;
+
+        ExecuteGhostCustomPowerShellScript(command);
+        return true;
+    }
+
+    private void ExecuteGhostCustomCommandByName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            AddDashboardConsoleLine("Usage: ghost run <custom-command-name>", Color.FromRgb(245, 196, 106));
+            return;
+        }
+
+        var command = _customCommands.FirstOrDefault(x =>
+            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (command is null)
+        {
+            AddDashboardConsoleLine($"Custom command not found: {name}. Use 'ghost commands' to list saved commands.",
+                Color.FromRgb(255, 142, 142), true);
+            return;
+        }
+
+        ExecuteGhostCustomPowerShellScript(command);
+    }
+
+    private void ExecuteGhostCustomPowerShellScript(GhostCustomCommand command)
+    {
+        var process = _dashboardPowerShellProcess;
+        if (process is null || process.HasExited)
+        {
+            AddDashboardConsoleLine("PowerShell is not running. Press RESTART to reconnect.",
+                Color.FromRgb(255, 177, 107), true);
+            return;
+        }
+
+        try
+        {
+            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(command.Script));
+            var invocation = $"Invoke-Expression ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{encoded}')))";
+            process.StandardInput.WriteLine(invocation);
+            process.StandardInput.Flush();
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine($"Could not run custom command '{command.Name}': {ex.Message}",
+                Color.FromRgb(255, 142, 142), true);
+        }
+    }
     private void ComingSoon_Click(object sender, RoutedEventArgs e)
     {
         var title = (sender as Button)?.Content?.ToString() ?? "WORKSPACE MODULE";
@@ -3651,6 +4414,9 @@ public partial class MainWindow : Window
         ShowModuleView(panel, title);
     }
 
+
+    private sealed record ConsoleTranscriptEntry(string Text, Color Color, bool IsBold);
+    private sealed record GhostCustomCommand(string Name, string Script);
 
     private sealed record VaultCaseOption(int Id, string CaseNumber, string Title)
     {
