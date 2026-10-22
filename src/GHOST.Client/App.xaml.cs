@@ -13,7 +13,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(
-                $"GHOST requires MariaDB. Check that the MariaDB service is running, create the database/user in HeidiSQL, and configure %LOCALAPPDATA%\\GHOST\\database.json.\n\n{ex.Message},
+                $"GHOST requires MariaDB. Check that the MariaDB service is running, create the database/user in HeidiSQL, and configure %LOCALAPPDATA%\\GHOST\\database.json.\n\n{ex.Message}",
                 "GHOST · Startup error",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
