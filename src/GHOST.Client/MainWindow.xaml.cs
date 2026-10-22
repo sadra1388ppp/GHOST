@@ -488,6 +488,379 @@ public partial class MainWindow : Window
             OpenCaseWorkspace(selected.Id);
     }
 
+    private void OpenCaseWorkspace(int caseId)
+    {
+        CaseFile? caseFile;
+        List<EvidenceItem> evidence;
+        List<Experiment> experiments;
+        List<Observation> observations;
+        List<TimelineEvent> timeline;
+        List<EvidenceRelationship> allRelationships;
+        List<AuditEntry> allAudit;
+
+        using (var db = new GhostDbContext())
+        {
+            caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
+            if (caseFile is null)
+            {
+                MessageBox.Show(this, "This case no longer exists in the local database.", "GHOST",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                RefreshStats();
+                return;
+            }
+
+            evidence = db.Evidence.AsNoTracking()
+                .Where(x => x.CaseFileId == caseId)
+                .OrderByDescending(x => x.CollectedAt)
+                .ToList();
+            experiments = db.Experiments.AsNoTracking()
+                .Where(x => x.CaseFileId == caseId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+            var experimentIds = experiments.Select(x => x.Id).ToList();
+            observations = db.Observations.AsNoTracking()
+                .Where(x => experimentIds.Contains(x.ExperimentId))
+                .OrderByDescending(x => x.RecordedAt)
+                .ToList();
+            timeline = db.TimelineEvents.AsNoTracking()
+                .Where(x => x.CaseFileId == caseId)
+                .OrderByDescending(x => x.OccurredAt)
+                .ToList();
+            allRelationships = db.Relationships.AsNoTracking().ToList();
+            allAudit = db.AuditLogs.AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+        }
+
+        _selectedCaseId = caseId;
+        SetActiveNavigation("Cases");
+
+        var evidenceIds = evidence.Select(x => x.Id).ToHashSet();
+        var experimentIdsSet = experiments.Select(x => x.Id).ToHashSet();
+        var observationIds = observations.Select(x => x.Id).ToHashSet();
+
+        string RelatedLabel(string type, int id)
+        {
+            return type switch
+            {
+                "Case" when id == caseFile.Id => $"{caseFile.CaseNumber} / {caseFile.Title}",
+                "Evidence" when evidence.FirstOrDefault(x => x.Id == id) is EvidenceItem e => e.Title,
+                "Experiment" when experiments.FirstOrDefault(x => x.Id == id) is Experiment e => e.Title,
+                "Observation" when observations.FirstOrDefault(x => x.Id == id) is Observation o => o.Description,
+                _ => $"{type.ToUpperInvariant()} #{id}"
+            };
+        }
+
+        var evidenceRows = evidence.Select(x =>
+            $"{(x.IsArchived ? "[ARCHIVED]" : "[ACTIVE]")} {x.Title}  |  {x.EvidenceType}  |  {x.CollectedAt.ToLocalTime():yyyy-MM-dd HH:mm}  |  SHA-256: {(string.IsNullOrWhiteSpace(x.Sha256) ? "not recorded" : x.Sha256)}").ToList();
+        var experimentRows = experiments.Select(x =>
+            $"[{x.Status.ToUpperInvariant()}] {x.Title}  |  {x.Category}  |  {x.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}\nObjective: {(string.IsNullOrWhiteSpace(x.Hypothesis) ? "Not recorded" : x.Hypothesis)}\nResult: {(string.IsNullOrWhiteSpace(x.Results) ? "Pending" : x.Results)}").ToList();
+        experimentRows.AddRange(observations.Select(x =>
+            $"[OBSERVATION] {x.RecordedAt.ToLocalTime():yyyy-MM-dd HH:mm}  |  {x.Description}" +
+            (x.NumericValue.HasValue ? $"  |  {x.NumericValue.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)} {x.Unit}" : string.Empty)));
+        var timelineRows = timeline.Select(x =>
+            $"{x.OccurredAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}  |  {x.Title}\n{x.Details}").ToList();
+
+        var relatedRelationships = allRelationships
+            .Where(x =>
+                (x.SourceType == "Case" && x.SourceId == caseId) ||
+                (x.TargetType == "Case" && x.TargetId == caseId) ||
+                (x.SourceType == "Evidence" && evidenceIds.Contains(x.SourceId)) ||
+                (x.TargetType == "Evidence" && evidenceIds.Contains(x.TargetId)) ||
+                (x.SourceType == "Experiment" && experimentIdsSet.Contains(x.SourceId)) ||
+                (x.TargetType == "Experiment" && experimentIdsSet.Contains(x.TargetId)) ||
+                (x.SourceType == "Observation" && observationIds.Contains(x.SourceId)) ||
+                (x.TargetType == "Observation" && observationIds.Contains(x.TargetId)))
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => $"{x.RelationshipType.ToUpperInvariant()}  |  {RelatedLabel(x.SourceType, x.SourceId)}  →  {RelatedLabel(x.TargetType, x.TargetId)}\nConfidence: {x.Confidence:P0}  |  {x.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}  |  {x.Description}")
+            .ToList();
+
+        var auditRows = allAudit
+            .Where(x =>
+                (x.EntityType == "Case" && x.EntityId == caseId) ||
+                (x.EntityType == "Evidence" && evidenceIds.Contains(x.EntityId)) ||
+                (x.EntityType == "Experiment" && experimentIdsSet.Contains(x.EntityId)) ||
+                (x.EntityType == "Observation" && observationIds.Contains(x.EntityId)))
+            .Take(120)
+            .Select(x => $"{x.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}  |  {x.EntityType.ToUpperInvariant()}  |  {x.Action}\n{x.Details}")
+            .ToList();
+
+        var root = new Grid { Margin = new Thickness(20) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var summary = new StackPanel();
+        summary.Children.Add(new TextBlock
+        {
+            Text = $"CASE FILE  /  {caseFile.CaseNumber}",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("CyanBrush"),
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        var titleBox = new TextBox
+        {
+            Text = caseFile.Title,
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold,
+            Height = 44,
+            Margin = new Thickness(0, 0, 0, 9),
+            ToolTip = "Case title"
+        };
+        summary.Children.Add(titleBox);
+        var descriptionBox = new TextBox
+        {
+            Text = caseFile.Description,
+            Height = 74,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Case summary / scope / investigator notes"
+        };
+        summary.Children.Add(descriptionBox);
+
+        var metadata = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
+        var statusBadge = new TextBlock
+        {
+            Text = $"STATUS: {caseFile.Status.ToUpperInvariant()}",
+            Foreground = string.Equals(caseFile.Status, "Closed", StringComparison.OrdinalIgnoreCase)
+                ? new SolidColorBrush(Color.FromRgb(255, 122, 131))
+                : (Brush)FindResource("NeonBrush"),
+            FontSize = 9,
+            Margin = new Thickness(0, 0, 16, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        metadata.Children.Add(statusBadge);
+        metadata.Children.Add(new TextBlock
+        {
+            Text = $"CREATED {caseFile.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}  /  LAST UPDATED {caseFile.UpdatedAt.ToLocalTime():yyyy-MM-dd HH:mm}",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        summary.Children.Add(metadata);
+
+        var actions = new WrapPanel();
+        var saveButton = new Button { Content = "SAVE CASE DETAILS", MinWidth = 155, Margin = new Thickness(0, 0, 8, 0) };
+        var statusButton = new Button { Content = caseFile.Status == "Closed" ? "REOPEN CASE" : "CLOSE CASE", MinWidth = 115, Margin = new Thickness(0, 0, 8, 0) };
+        var openDigitalLab = new Button { Content = "OPEN DIGITAL LAB", MinWidth = 145, Margin = new Thickness(0, 0, 8, 0) };
+        var openFieldLab = new Button { Content = "OPEN FIELD LAB", MinWidth = 135, Margin = new Thickness(0, 0, 8, 0) };
+        var openEvidence = new Button { Content = "VIEW EVIDENCE", MinWidth = 125, Margin = new Thickness(0, 0, 8, 0) };
+        var openNetwork = new Button { Content = "VIEW NETWORK", MinWidth = 125, Margin = new Thickness(0, 0, 8, 0) };
+        actions.Children.Add(saveButton);
+        actions.Children.Add(statusButton);
+        actions.Children.Add(openDigitalLab);
+        actions.Children.Add(openFieldLab);
+        actions.Children.Add(openEvidence);
+        actions.Children.Add(openNetwork);
+        summary.Children.Add(actions);
+
+        saveButton.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(titleBox.Text))
+            {
+                status.Text = "A case title is required.";
+                return;
+            }
+            try
+            {
+                using var db = new GhostDbContext();
+                var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
+                if (stored is null)
+                {
+                    status.Text = "This case could not be found. Refresh the archive.";
+                    return;
+                }
+                var oldTitle = stored.Title;
+                stored.Title = titleBox.Text.Trim();
+                stored.Description = descriptionBox.Text.Trim();
+                stored.UpdatedAt = DateTime.UtcNow;
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Case",
+                    EntityId = stored.Id,
+                    Action = "Updated",
+                    Details = $"Case details updated. Title: {oldTitle} → {stored.Title}."
+                });
+                db.SaveChanges();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = "Case details saved and added to the audit history.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Case details could not be saved: {ex.Message}";
+            }
+        };
+
+        statusButton.Click += (_, _) =>
+        {
+            try
+            {
+                using var db = new GhostDbContext();
+                var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
+                if (stored is null) return;
+                stored.Status = string.Equals(stored.Status, "Closed", StringComparison.OrdinalIgnoreCase) ? "Open" : "Closed";
+                stored.UpdatedAt = DateTime.UtcNow;
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Case",
+                    EntityId = stored.Id,
+                    Action = stored.Status == "Closed" ? "Closed" : "Reopened",
+                    Details = $"Case {stored.CaseNumber} status changed to {stored.Status}."
+                });
+                db.SaveChanges();
+                RefreshStats();
+                RefreshNetwork();
+                OpenCaseWorkspace(caseId);
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Case status could not be changed: {ex.Message}";
+            }
+        };
+
+        openDigitalLab.Click += (_, _) => DigitalLab_Click(this, new RoutedEventArgs());
+        openFieldLab.Click += (_, _) => FieldLab_Click(this, new RoutedEventArgs());
+        openEvidence.Click += (_, _) => EvidenceVault_Click(this, new RoutedEventArgs());
+        openNetwork.Click += (_, _) =>
+        {
+            _selectedNetworkNode = _nodes.FirstOrDefault(x => x.Type == "Case" && x.Id == caseId);
+            Network_Click(this, new RoutedEventArgs());
+            if (_selectedNetworkNode is not null)
+            {
+                SelectedNodeTitle.Text = _selectedNetworkNode.Title;
+                SelectedNodeDetails.Text = $"{_selectedNetworkNode.Type.ToUpperInvariant()} / RECORD ID {_selectedNetworkNode.Id}\n{_selectedNetworkNode.Subtitle}";
+                OpenSelectedNodeButton.IsEnabled = true;
+            }
+        };
+
+        var card = CreateModuleCard(summary, new Thickness(0, 0, 0, 14));
+        Grid.SetRow(card, 0);
+        root.Children.Add(card);
+
+        var metrics = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 14) };
+        metrics.Children.Add(CreateMetricCard("EVIDENCE", evidence.Count(x => !x.IsArchived).ToString(), "ACTIVE VAULT RECORDS"));
+        metrics.Children.Add(CreateMetricCard("EXPERIMENTS", experiments.Count.ToString(), "SAVED PROCEDURES"));
+        metrics.Children.Add(CreateMetricCard("OBSERVATIONS", observations.Count.ToString(), "MEASUREMENTS / FINDINGS"));
+        metrics.Children.Add(CreateMetricCard("TIMELINE", timeline.Count.ToString(), "CHRONOLOGICAL EVENTS"));
+        Grid.SetRow(metrics, 1);
+        root.Children.Add(metrics);
+
+        var tabs = new TabControl { Margin = new Thickness(0, 0, 0, 0), MinHeight = 220 };
+        tabs.Items.Add(CreateCaseTab("EVIDENCE", evidenceRows, "No evidence has been imported for this case yet."));
+        tabs.Items.Add(CreateCaseTab("EXPERIMENTS & OBSERVATIONS", experimentRows, "No experiments or observations have been saved for this case."));
+        tabs.Items.Add(CreateCaseTab("TIMELINE", timelineRows, "No timeline events have been recorded for this case."));
+        tabs.Items.Add(CreateCaseTab("CONNECTIONS", relatedRelationships, "No saved relationships involve this case or its records."));
+        tabs.Items.Add(CreateCaseTab("AUDIT HISTORY", auditRows, "No audit entries are available for this case yet."));
+        Grid.SetRow(tabs, 2);
+        root.Children.Add(tabs);
+
+        ShowModuleView(root, "CASE FILES");
+    }
+
+    private Border CreateModuleCard(UIElement content, Thickness margin = default)
+    {
+        return new Border
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(9),
+            Padding = new Thickness(16),
+            Margin = margin,
+            Child = content
+        };
+    }
+
+    private Border CreateMetricCard(string title, string value, string caption)
+    {
+        var body = new StackPanel();
+        body.Children.Add(new TextBlock { Text = title, FontSize = 9, Foreground = (Brush)FindResource("MutedBrush") });
+        body.Children.Add(new TextBlock { Text = value, FontSize = 25, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("NeonBrush"), Margin = new Thickness(0, 5, 0, 2) });
+        body.Children.Add(new TextBlock { Text = caption, FontSize = 8, Foreground = (Brush)FindResource("MutedBrush"), TextWrapping = TextWrapping.Wrap });
+        return new Border
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 0, 10, 0),
+            Child = body
+        };
+    }
+
+    private TabItem CreateCaseTab(string title, List<string> entries, string emptyMessage)
+    {
+        UIElement content;
+        if (entries.Count == 0)
+        {
+            content = new Border
+            {
+                Padding = new Thickness(18),
+                Child = new TextBlock
+                {
+                    Text = emptyMessage,
+                    Foreground = (Brush)FindResource("MutedBrush"),
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+        }
+        else
+        {
+            content = new ListBox
+            {
+                ItemsSource = entries,
+                Background = (Brush)FindResource("PanelBrush"),
+                Foreground = (Brush)FindResource("TextBrush"),
+                BorderThickness = new Thickness(0),
+                Margin = new Thickness(5)
+            };
+        }
+
+        return new TabItem { Header = title, Content = content, Padding = new Thickness(12, 7, 12, 7) };
+    }
+
+    private static string GetGhostDataDirectory() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
+
+    private static string GetEvidenceFilePath(string relativePath)
+    {
+        var root = Path.GetFullPath(GetGhostDataDirectory());
+        var fullPath = Path.GetFullPath(Path.Combine(root, relativePath ?? string.Empty));
+        var relative = Path.GetRelativePath(root, fullPath);
+        if (relative == "." ||
+            relative == ".." ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            Path.IsPathRooted(relative))
+        {
+            throw new InvalidOperationException("The evidence path points outside the GHOST data folder.");
+        }
+        return fullPath;
+    }
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
+        return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
+    private static string FormatFileSize(long size)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = size;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.##} {units[unit]}";
+    }
+
     private void Network_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("Network");
@@ -1664,33 +2037,392 @@ public partial class MainWindow : Window
 
     private void EvidenceVault_Click(object sender, RoutedEventArgs e)
     {
-        var panel = new StackPanel { Margin = new Thickness(8) };
-        panel.Children.Add(new TextBlock
+        var root = new DockPanel { Margin = new Thickness(20) };
+        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        header.Children.Add(new TextBlock
         {
-            Text = "EVIDENCE VAULT // LOCAL ARCHIVE",
-            FontSize = 16,
-            Foreground = (Brush)FindResource("NeonBrush"),
-            Margin = new Thickness(0, 0, 0, 12)
+            Text = "EVIDENCE VAULT // INTEGRITY WORKSPACE",
+            FontSize = 19,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush")
         });
-        panel.Children.Add(new TextBlock
+        header.Children.Add(new TextBlock
         {
-            Text = "This workspace stays inside the main GHOST window. The file-import workflow is the next module to complete.",
-            FontSize = 11,
-            Foreground = (Brush)FindResource("TextBrush"),
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 10)
-        });
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Planned: copy originals into the local vault, calculate SHA-256, verify stored copies, record provenance, and archive entries without deleting source files.",
+            Text = "Import a copy of source files, associate them with a case, and verify stored bytes with SHA-256. Source originals are never moved or modified.",
             FontSize = 10,
             Foreground = (Brush)FindResource("MutedBrush"),
             TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 760
+            Margin = new Thickness(0, 6, 0, 0)
         });
-        ShowModuleView(panel, "EVIDENCE VAULT");
-    }
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
 
+        var status = new TextBlock
+        {
+            Text = "Select a case to import evidence. Hash verification detects byte changes; it does not prove authorship or authenticity.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        DockPanel.SetDock(status, Dock.Bottom);
+        root.Children.Add(status);
+
+        var toolbar = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 12) };
+        var casePicker = new ComboBox
+        {
+            Width = 300,
+            Height = 38,
+            Margin = new Thickness(0, 0, 10, 0),
+            DisplayMemberPath = nameof(VaultCaseOption.DisplayText),
+            ToolTip = "Choose a case to filter records or associate imported evidence"
+        };
+        DockPanel.SetDock(casePicker, Dock.Left);
+        toolbar.Children.Add(casePicker);
+
+        var actions = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
+        var importButton = new Button { Content = "+ IMPORT FILES", MinWidth = 130, Margin = new Thickness(0, 0, 7, 0) };
+        var verifyButton = new Button { Content = "VERIFY SHA-256", MinWidth = 135, IsEnabled = false, Margin = new Thickness(0, 0, 7, 0) };
+        var revealButton = new Button { Content = "REVEAL IN FOLDER", MinWidth = 145, IsEnabled = false, Margin = new Thickness(0, 0, 7, 0) };
+        var archiveButton = new Button { Content = "ARCHIVE SELECTED", MinWidth = 145, IsEnabled = false, Margin = new Thickness(0, 0, 7, 0) };
+        var openCaseButton = new Button { Content = "OPEN RELATED CASE", MinWidth = 150, IsEnabled = false, Margin = new Thickness(0, 0, 7, 0) };
+        actions.Children.Add(importButton);
+        actions.Children.Add(verifyButton);
+        actions.Children.Add(revealButton);
+        actions.Children.Add(archiveButton);
+        actions.Children.Add(openCaseButton);
+        toolbar.Children.Add(actions);
+        DockPanel.SetDock(toolbar, Dock.Top);
+        root.Children.Add(toolbar);
+
+        var search = new TextBox
+        {
+            Height = 36,
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Search evidence name, type, status, or hash"
+        };
+        DockPanel.SetDock(search, Dock.Top);
+        root.Children.Add(search);
+
+        var list = new ListView
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            SelectionMode = SelectionMode.Single
+        };
+        var columns = new GridView();
+        columns.Columns.Add(new GridViewColumn { Header = "EVIDENCE", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.Title)), Width = 210 });
+        columns.Columns.Add(new GridViewColumn { Header = "CASE", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.CaseLabel)), Width = 170 });
+        columns.Columns.Add(new GridViewColumn { Header = "TYPE", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.EvidenceType)), Width = 95 });
+        columns.Columns.Add(new GridViewColumn { Header = "SIZE", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.SizeLabel)), Width = 90 });
+        columns.Columns.Add(new GridViewColumn { Header = "IMPORTED", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.CollectedAtLabel)), Width = 140 });
+        columns.Columns.Add(new GridViewColumn { Header = "STATE", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.Status)), Width = 95 });
+        columns.Columns.Add(new GridViewColumn { Header = "SHA-256", DisplayMemberBinding = new Binding(nameof(EvidenceVaultRow.HashPreview)), Width = 170 });
+        list.View = columns;
+        root.Children.Add(list);
+
+        void RefreshRows()
+        {
+            try
+            {
+                var filterCaseId = (casePicker.SelectedItem as VaultCaseOption)?.Id ?? 0;
+                var term = search.Text.Trim();
+                using var db = new GhostDbContext();
+                var records = db.Evidence.AsNoTracking()
+                    .OrderByDescending(x => x.CollectedAt)
+                    .ToList()
+                    .Where(x => filterCaseId == 0 || x.CaseFileId == filterCaseId)
+                    .Select(x =>
+                    {
+                        var fullPath = string.Empty;
+                        long size = 0;
+                        try
+                        {
+                            fullPath = GetEvidenceFilePath(x.RelativePath);
+                            if (File.Exists(fullPath))
+                                size = new FileInfo(fullPath).Length;
+                        }
+                        catch
+                        {
+                            // An invalid or missing path is surfaced through the status/verification action.
+                        }
+                        var caseLabel = db.Cases.AsNoTracking()
+                            .Where(c => c.Id == x.CaseFileId)
+                            .Select(c => c.CaseNumber + " / " + c.Title)
+                            .FirstOrDefault() ?? $"CASE #{x.CaseFileId}";
+                        return new EvidenceVaultRow(
+                            x.Id,
+                            x.CaseFileId,
+                            x.Title,
+                            caseLabel,
+                            string.IsNullOrWhiteSpace(x.EvidenceType) ? "FILE" : x.EvidenceType.ToUpperInvariant(),
+                            File.Exists(fullPath) ? FormatFileSize(size) : "MISSING",
+                            x.CollectedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                            x.IsArchived ? "ARCHIVED" : "ACTIVE",
+                            string.IsNullOrWhiteSpace(x.Sha256) ? "NO HASH" : x.Sha256[..Math.Min(12, x.Sha256.Length)].ToUpperInvariant(),
+                            x.Sha256,
+                            x.RelativePath);
+                    })
+                    .Where(x => string.IsNullOrWhiteSpace(term) ||
+                                x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.CaseLabel.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.EvidenceType.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.Status.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.Sha256.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var priorId = (list.SelectedItem as EvidenceVaultRow)?.Id ?? _selectedEvidenceId;
+                list.ItemsSource = records;
+                list.SelectedItem = priorId.HasValue
+                    ? records.FirstOrDefault(x => x.Id == priorId.Value)
+                    : null;
+                if (list.SelectedItem is EvidenceVaultRow selected)
+                    _selectedEvidenceId = selected.Id;
+                else if (_selectedEvidenceId.HasValue && !records.Any(x => x.Id == _selectedEvidenceId.Value))
+                    _selectedEvidenceId = null;
+                status.Text = records.Count == 0
+                    ? "No evidence records match this view. Use IMPORT FILES to add a protected vault copy."
+                    : $"{records.Count} evidence record(s) shown. Original files remain untouched; use VERIFY SHA-256 to check the stored copy.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Evidence records could not be loaded: {ex.Message}";
+            }
+        }
+
+        using (var db = new GhostDbContext())
+        {
+            var cases = db.Cases.AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList()
+                .Select(x => new VaultCaseOption(x.Id, x.CaseNumber, x.Title))
+                .ToList();
+            var options = new List<VaultCaseOption> { new(0, "ALL CASES", "All cases — browse only") };
+            options.AddRange(cases);
+            casePicker.ItemsSource = options;
+            casePicker.SelectedItem = _selectedCaseId.HasValue
+                ? options.FirstOrDefault(x => x.Id == _selectedCaseId.Value) ?? options[0]
+                : options[0];
+        }
+
+        casePicker.SelectionChanged += (_, _) =>
+        {
+            if (ReferenceEquals(_activeModuleContent, root))
+                RefreshRows();
+        };
+        search.TextChanged += (_, _) =>
+        {
+            if (ReferenceEquals(_activeModuleContent, root))
+                RefreshRows();
+        };
+        list.SelectionChanged += (_, _) =>
+        {
+            var selected = list.SelectedItem as EvidenceVaultRow;
+            verifyButton.IsEnabled = selected is not null;
+            revealButton.IsEnabled = selected is not null;
+            archiveButton.IsEnabled = selected is not null;
+            openCaseButton.IsEnabled = selected is not null;
+            archiveButton.Content = selected?.Status == "ARCHIVED" ? "RESTORE TO ACTIVE" : "ARCHIVE SELECTED";
+        };
+
+        importButton.Click += (_, _) =>
+        {
+            if (casePicker.SelectedItem is not VaultCaseOption selectedCase || selectedCase.Id == 0)
+            {
+                status.Text = "Choose a specific case before importing files. ALL CASES is browse-only.";
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "Import copies into GHOST Evidence Vault",
+                Multiselect = true,
+                CheckFileExists = true,
+                Filter = "All files (*.*)|*.*"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+
+            var imported = 0;
+            var lastId = 0;
+            var dataRoot = GetGhostDataDirectory();
+            var evidenceDirectory = Path.Combine(dataRoot, "Evidence");
+            Directory.CreateDirectory(evidenceDirectory);
+
+            try
+            {
+                using var db = new GhostDbContext();
+                foreach (var sourcePath in dialog.FileNames)
+                {
+                    string? copiedPath = null;
+                    using var transaction = db.Database.BeginTransaction();
+                    try
+                    {
+                        var extension = Path.GetExtension(sourcePath);
+                        var storedName = Guid.NewGuid().ToString("N") + extension;
+                        copiedPath = Path.Combine(evidenceDirectory, storedName);
+                        File.Copy(sourcePath, copiedPath, overwrite: false);
+                        var hash = ComputeSha256(copiedPath);
+                        var evidence = new EvidenceItem
+                        {
+                            CaseFileId = selectedCase.Id,
+                            Title = Path.GetFileName(sourcePath),
+                            EvidenceType = string.IsNullOrWhiteSpace(extension) ? "File" : extension.TrimStart('.').ToUpperInvariant(),
+                            RelativePath = Path.Combine("Evidence", storedName),
+                            Sha256 = hash,
+                            Notes = string.Empty,
+                            CollectedAt = DateTime.UtcNow
+                        };
+                        db.Evidence.Add(evidence);
+                        db.SaveChanges();
+                        db.AuditLogs.Add(new AuditEntry
+                        {
+                            EntityType = "Evidence",
+                            EntityId = evidence.Id,
+                            Action = "Imported",
+                            Details = $"Imported a copy of {evidence.Title}; SHA-256 {hash}; source file was not modified."
+                        });
+                        db.SaveChanges();
+                        transaction.Commit();
+                        imported++;
+                        lastId = evidence.Id;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        if (copiedPath is not null && File.Exists(copiedPath))
+                        {
+                            try { File.Delete(copiedPath); } catch { }
+                        }
+                        throw;
+                    }
+                }
+
+                _selectedCaseId = selectedCase.Id;
+                _selectedEvidenceId = lastId > 0 ? lastId : null;
+                RefreshRows();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = $"Imported {imported} file copy/copies. SHA-256 recorded; source originals were not moved or changed.";
+            }
+            catch (Exception ex)
+            {
+                RefreshRows();
+                status.Text = $"Import stopped: {ex.Message}. Any completed imports remain recorded in the vault.";
+            }
+        };
+
+        verifyButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is not EvidenceVaultRow selected)
+                return;
+
+            try
+            {
+                var fullPath = GetEvidenceFilePath(selected.RelativePath);
+                var exists = File.Exists(fullPath);
+                var actualHash = exists ? ComputeSha256(fullPath) : string.Empty;
+                var matched = exists &&
+                    string.Equals(actualHash, selected.Sha256, StringComparison.OrdinalIgnoreCase);
+                using var db = new GhostDbContext();
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Evidence",
+                    EntityId = selected.Id,
+                    Action = !exists ? "Verification Failed" : matched ? "Hash Verified" : "Hash Mismatch",
+                    Details = !exists
+                        ? $"Verification failed: stored copy is missing for {selected.Title}."
+                        : matched
+                            ? $"SHA-256 verified for {selected.Title}: {actualHash}."
+                            : $"SHA-256 mismatch for {selected.Title}. Expected {selected.Sha256}; actual {actualHash}."
+                });
+                db.SaveChanges();
+                status.Foreground = matched
+                    ? (Brush)FindResource("NeonBrush")
+                    : (Brush)FindResource("AmberBrush");
+                status.Text = !exists
+                    ? "MISSING COPY — the vault file could not be found. The original source path is not changed."
+                    : matched
+                        ? $"HASH MATCH — {selected.Title}. The stored bytes match the recorded SHA-256."
+                        : $"HASH MISMATCH — {selected.Title}. The stored copy differs from its recorded SHA-256; review the audit log.";
+            }
+            catch (Exception ex)
+            {
+                status.Foreground = (Brush)FindResource("AmberBrush");
+                status.Text = $"Hash verification could not complete: {ex.Message}";
+            }
+        };
+
+        revealButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is not EvidenceVaultRow selected)
+                return;
+            try
+            {
+                var fullPath = GetEvidenceFilePath(selected.RelativePath);
+                if (!File.Exists(fullPath))
+                {
+                    status.Text = "The stored copy is missing. Run SHA-256 verification to record this state.";
+                    return;
+                }
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{fullPath}\"")
+                {
+                    UseShellExecute = true
+                });
+                status.Text = "Selected vault copy in File Explorer. GHOST does not execute evidence files.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Could not reveal this vault copy: {ex.Message}";
+            }
+        };
+
+        archiveButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is not EvidenceVaultRow selected)
+                return;
+            try
+            {
+                using var db = new GhostDbContext();
+                var item = db.Evidence.FirstOrDefault(x => x.Id == selected.Id);
+                if (item is null)
+                {
+                    RefreshRows();
+                    return;
+                }
+                item.IsArchived = !item.IsArchived;
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Evidence",
+                    EntityId = item.Id,
+                    Action = item.IsArchived ? "Archived" : "Restored",
+                    Details = $"{(item.IsArchived ? "Archived" : "Restored")} evidence record {item.Title}; vault file retained."
+                });
+                db.SaveChanges();
+                RefreshRows();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = item.IsArchived
+                    ? "Evidence archived. The file and metadata remain in the vault."
+                    : "Evidence restored to the active vault.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Evidence status could not be changed: {ex.Message}";
+            }
+        };
+
+        openCaseButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is EvidenceVaultRow selected)
+                OpenCaseWorkspace(selected.CaseFileId);
+        };
+
+        ShowModuleView(root, "EVIDENCE VAULT");
+        RefreshRows();
+    }
 
     private void Terminal_Click(object sender, RoutedEventArgs e)
     {
@@ -1735,6 +2467,24 @@ public partial class MainWindow : Window
         ShowModuleView(panel, title);
     }
 
+
+    private sealed record VaultCaseOption(int Id, string CaseNumber, string Title)
+    {
+        public string DisplayText => Id == 0 ? $"{CaseNumber} / {Title}" : $"{CaseNumber} / {Title}";
+    }
+
+    private sealed record EvidenceVaultRow(
+        int Id,
+        int CaseFileId,
+        string Title,
+        string CaseLabel,
+        string EvidenceType,
+        string SizeLabel,
+        string CollectedAtLabel,
+        string Status,
+        string HashPreview,
+        string Sha256,
+        string RelativePath);
 
     private sealed record FieldCaseOption(int Id, string CaseNumber, string Title)
     {
