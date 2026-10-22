@@ -13,7 +13,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(
-                $"GHOST could not initialize its local database.\n\n{ex.Message}",
+                $"GHOST could not initialize the configured database. Check the database provider and connection settings.\n\n{ex.Message}",
                 "GHOST · Startup error",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
