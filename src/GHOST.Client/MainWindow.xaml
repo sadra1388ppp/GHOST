@@ -548,41 +548,92 @@
                     </DockPanel>
                 </Border>
 
-                <!-- LOCAL INTEGRITY -->
-                <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
-                        CornerRadius="8" Padding="17">
-                    <StackPanel>
-                        <TextBlock Text="WORKSPACE INTEGRITY" FontSize="10"
-                                   Foreground="{StaticResource NeonBrush}" />
-                        <Grid Margin="0,12,0,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="9" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Ellipse Width="6" Height="6" Fill="{StaticResource NeonBrush}"
-                                     VerticalAlignment="Top" Margin="0,4,0,0" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="LOCAL DATABASE" FontSize="9" />
-                                <TextBlock Text="%LOCALAPPDATA%\GHOST\GHOST.db"
-                                           FontSize="8" Foreground="{StaticResource MutedBrush}"
-                                           TextWrapping="Wrap" Margin="0,4,0,0" />
-                            </StackPanel>
-                        </Grid>
-                        <Border Height="1" Background="{StaticResource LineBrush}" />
-                        <Grid Margin="0,9,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="9" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="!" FontSize="10"
-                                       Foreground="{StaticResource AmberBrush}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="Evidence is stored locally, but encryption at rest is not configured yet. Avoid sensitive material until security hardening is complete."
-                                       FontSize="8" Foreground="{StaticResource MutedBrush}"
-                                       TextWrapping="Wrap" LineHeight="14" />
-                        </Grid>
-                    </StackPanel>
+                <!-- GHOST SHELL: compact PowerShell-inspired, read-only local console -->
+                <Border Grid.Row="1" Grid.Column="1"
+                        Background="#050906" BorderBrush="#315C3D" BorderThickness="1"
+                        CornerRadius="8" Padding="0" ClipToBounds="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="34" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="18" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Terminal chrome -->
+                        <Border Grid.Row="0" Background="#111A13"
+                                BorderBrush="#25452D" BorderThickness="0,0,0,1">
+                            <Grid Margin="10,0,10,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                            Margin="0,0,9,0">
+                                    <Ellipse Width="7" Height="7" Fill="#63FFA0" Margin="0,0,4,0" />
+                                    <Ellipse Width="7" Height="7" Fill="#36734A" Margin="0,0,4,0" />
+                                    <Ellipse Width="7" Height="7" Fill="#244B31" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="GHOST SHELL" FontSize="9"
+                                               FontWeight="SemiBold" Foreground="#BFFFD0" />
+                                </StackPanel>
+                                <Border Grid.Column="2" Background="#14291A"
+                                        BorderBrush="#28563A" BorderThickness="1"
+                                        CornerRadius="3" Padding="6,3"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="READ-ONLY" FontSize="7"
+                                               Foreground="#63FFA0" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Scrollable command history -->
+                        <ScrollViewer x:Name="DashboardConsoleScrollViewer" Grid.Row="1"
+                                      Background="#050906"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="DashboardConsoleOutputPanel"
+                                        Margin="11,8,9,3" />
+                        </ScrollViewer>
+
+                        <!-- Command prompt -->
+                        <Border Grid.Row="2" Background="#0B130D"
+                                BorderBrush="#23472E" BorderThickness="0,1,0,0"
+                                Padding="9,7">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="PS&gt;" FontSize="10" FontWeight="Bold"
+                                           Foreground="#63FFA0" VerticalAlignment="Center"
+                                           Margin="0,0,8,0" />
+                                <TextBox x:Name="DashboardConsoleInput" Grid.Column="1"
+                                         Height="28" Padding="7,4"
+                                         Background="#050906" BorderBrush="#25472E"
+                                         BorderThickness="1" Foreground="#C8F8D4"
+                                         CaretBrush="#63FFA0" FontSize="9"
+                                         VerticalContentAlignment="Center"
+                                         ToolTip="Type help, status, system, cases, evidence, labs, uptime, host, time, or clear"
+                                         KeyDown="DashboardConsoleInput_KeyDown" />
+                                <Button Grid.Column="2" Content="RUN  ↵"
+                                        Click="DashboardConsoleRun_Click"
+                                        Padding="8,5" FontSize="8"
+                                        Margin="6,0,0,0" Background="#14291A"
+                                        BorderBrush="#2C6840" Foreground="#8FFFB1" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Safe mode indicator -->
+                        <Border Grid.Row="3" Background="#0B130D" Padding="10,1">
+                            <TextBlock Text="LOCAL DIAGNOSTICS ONLY  //  NO OS COMMAND EXECUTION"
+                                       FontSize="7" Foreground="#668A70"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>
