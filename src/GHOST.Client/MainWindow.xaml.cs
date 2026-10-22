@@ -261,6 +261,16 @@ public partial class MainWindow : Window
         DockPanel.SetDock(headingPanel, Dock.Top);
         panel.Children.Add(headingPanel);
 
+        var search = new TextBox
+        {
+            Height = 36,
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Search by case number, title, or status"
+        };
+        search.TextChanged += (_, _) => RefreshRows();
+        DockPanel.SetDock(search, Dock.Top);
+        panel.Children.Add(search);
+
         var list = new ListView
         {
             Background = (Brush)FindResource("PanelBrush"),
@@ -329,16 +339,6 @@ public partial class MainWindow : Window
         footer.Children.Add(close);
         DockPanel.SetDock(footer, Dock.Bottom);
         panel.Children.Add(footer);
-
-        var search = new TextBox
-        {
-            Height = 36,
-            Margin = new Thickness(0, 0, 0, 10),
-            ToolTip = "Search by case number, title, or status"
-        };
-        search.TextChanged += (_, _) => RefreshRows();
-        DockPanel.SetDock(search, Dock.Top);
-        panel.Children.Add(search);
 
 
         panel.Children.Add(list);
