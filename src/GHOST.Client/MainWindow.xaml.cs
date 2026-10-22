@@ -1007,6 +1007,7 @@ public partial class MainWindow : Window
 
         CasesCount.Text = db.Cases.Count(x => x.Status == "Open").ToString();
         ClosedCasesCount.Text = db.Cases.Count(x => x.Status == "Closed").ToString();
+        TotalCasesCount.Text = db.Cases.Count().ToString();
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
         var recentCases = db.Cases
