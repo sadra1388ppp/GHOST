@@ -186,7 +186,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
             Color.FromRgb(245, 196, 106));
-        AddDashboardConsoleLine("Use 'help' in PowerShell for command help, or type any normal command below.",
+        AddDashboardConsoleLine("Type 'ghost help' for GHOST commands; all other commands run in PowerShell.",
             Color.FromRgb(136, 171, 148));
         AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
         StartDashboardPowerShell();
@@ -790,7 +790,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var selector = string.Join(' ', parts.Skip(2)).Trim().Trim('"');
+        var selector = string.Join(" ", parts.Skip(2)).Trim().Trim('"');
         int? caseId = null;
 
         using (var db = new GhostDbContext())
