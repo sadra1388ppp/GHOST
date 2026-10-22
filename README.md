@@ -4,18 +4,24 @@ Offline-first digital and field investigation lab for Windows.
 
 > Every trace tells a story.
 
-## Status
+## Current status
 
-Current foundation includes the dark WPF dashboard, local SQLite persistence, case creation/listing, and an in-window Investigation Network for creating and reviewing record relationships. Evidence import/integrity verification, Digital Lab, Field Lab, and encryption hardening are still pending.
+GHOST is in active development. The app currently includes a dark WPF command center, local SQLite persistence, case creation, searchable case archive with open/closed status changes, and an Investigation Network embedded in the main window. Startup sizing adapts to the available desktop workspace.
 
-## Planned stack
+Evidence import and integrity verification, Digital Lab, Field Lab, case timeline/report export, verified backup/restore, encryption hardening, and a packaged release are still on the roadmap. Features are not considered complete until their persistence, audit history, error handling, and validation are tested.
 
-- C# / WPF
-- .NET 10
-- SQLite with Entity Framework Core
-- MVVM architecture
-- Local evidence vault
+## Run from source
 
-## Safety and integrity
+Requires the .NET 10 SDK and Windows:
 
-GHOST is designed for authorized investigations and controlled lab environments. Hashes help detect file changes but do not independently prove authenticity. Preserve originals and document collection methods.
+dotnet run --project .\src\GHOST.Client\GHOST.Client.csproj
+
+## Data location
+
+Local database: %LOCALAPPDATA%\GHOST\GHOST.db
+
+Evidence and backups are planned under the same application data folder. See docs/ROADMAP.md for the end-to-end plan and acceptance criteria.
+
+## Integrity and safety
+
+The current database does not have encryption at rest. Do not put sensitive evidence into the current build until data and backup protection have been implemented and tested. SHA-256 helps detect byte-for-byte changes; it does not independently prove who created a file or that the collection process was trustworthy. Preserve originals and document provenance.
