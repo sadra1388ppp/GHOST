@@ -314,7 +314,7 @@
             </Border>
 
             <!-- METRIC CARDS -->
-            <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,14">
+            <UniformGrid Grid.Row="2" Columns="5" Margin="0,0,0,14">
                 <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                         BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
                     <Grid>
@@ -365,6 +365,34 @@
                             <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
                                     Background="#35181D" VerticalAlignment="Top">
                                 <TextBlock Text="✓" FontSize="17" Foreground="#FF7A83"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
+                        BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="3" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Background="#87BFFF" CornerRadius="8,8,0,0" />
+                        <Grid Grid.Row="1" Margin="14,9,12,9">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TOTAL CASES" FontSize="9" Foreground="{StaticResource MutedBrush}" />
+                                <TextBlock x:Name="TotalCasesCount" Text="0" FontSize="27" FontWeight="SemiBold"
+                                           Foreground="#87BFFF" Margin="0,2,0,0" />
+                                <TextBlock Text="ALL INVESTIGATIONS" FontSize="7" Foreground="#8299B5" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
+                                    Background="#182638" VerticalAlignment="Top">
+                                <TextBlock Text="Σ" FontSize="18" FontWeight="SemiBold" Foreground="#87BFFF"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                         </Grid>
