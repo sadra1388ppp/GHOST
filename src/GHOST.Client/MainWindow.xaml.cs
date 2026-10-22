@@ -41,7 +41,6 @@ public partial class MainWindow : Window
         CasesCount.Text = db.Cases.Count(x => x.Status == "Open").ToString();
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
-        LinksCount.Text = db.Relationships.Count().ToString();
         ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
 
         var recentCases = db.Cases
