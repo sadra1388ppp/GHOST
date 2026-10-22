@@ -245,7 +245,7 @@ public partial class MainWindow : Window
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (ReferenceEquals(_dashboardPowerShellProcess, process))
-                            DashboardConsolePromptText.Text = $"PS {currentPath}&gt;";
+                            DashboardConsolePromptText.Text = $"PS {currentPath}>";
                     }));
                     return;
                 }
