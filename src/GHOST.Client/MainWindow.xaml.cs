@@ -773,6 +773,18 @@ public partial class MainWindow : Window
         ShowModuleView(root, "CASE FILES");
     }
 
+    private TextBlock CreateFormLabel(string text)
+    {
+        return new TextBlock
+        {
+            Text = text,
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(1, 7, 0, 4)
+        };
+    }
+
     private Border CreateModuleCard(UIElement content, Thickness margin = default)
     {
         return new Border
@@ -1448,7 +1460,12 @@ public partial class MainWindow : Window
 
     private void FieldLab_Click(object sender, RoutedEventArgs e)
     {
-        var root = new DockPanel { Margin = new Thickness(20) };
+        var root = new Grid { Margin = new Thickness(20) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.92, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.08, GridUnitType.Star) });
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
         header.Children.Add(new TextBlock
         {
@@ -1464,7 +1481,8 @@ public partial class MainWindow : Window
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 5, 0, 0)
         });
-        DockPanel.SetDock(header, Dock.Top);
+        Grid.SetRow(header, 0);
+        Grid.SetColumnSpan(header, 2);
         root.Children.Add(header);
 
         var casePicker = new ComboBox
@@ -1474,8 +1492,12 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             ToolTip = "Select the related case"
         };
-        DockPanel.SetDock(casePicker, Dock.Top);
-        root.Children.Add(casePicker);
+        var casePickerPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+        casePickerPanel.Children.Add(CreateFormLabel("LINKED CASE"));
+        casePickerPanel.Children.Add(casePicker);
+        Grid.SetRow(casePickerPanel, 1);
+        Grid.SetColumnSpan(casePickerPanel, 2);
+        root.Children.Add(casePickerPanel);
 
         var form = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         var typeBox = new ComboBox { Height = 34, Margin = new Thickness(0, 0, 0, 7) };
@@ -1499,15 +1521,26 @@ public partial class MainWindow : Window
         measurementRow.Children.Add(valueBox);
         measurementRow.Children.Add(unitBox);
         var saveButton = new Button { Content = "SAVE FIELD ENTRY", Width = 190, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0) };
+        form.Children.Add(CreateFormLabel("ENTRY TYPE"));
         form.Children.Add(typeBox);
+        form.Children.Add(CreateFormLabel("ENTRY TITLE"));
         form.Children.Add(titleBox);
+        form.Children.Add(CreateFormLabel("LOCATION / SITE (OPTIONAL)"));
         form.Children.Add(locationBox);
+        form.Children.Add(CreateFormLabel("OBSERVATION / METHOD"));
         form.Children.Add(detailsBox);
+        form.Children.Add(CreateFormLabel("MEASUREMENT (WHEN APPLICABLE)"));
         form.Children.Add(measurementRow);
         form.Children.Add(saveButton);
-        var formCard = CreateModuleCard(form, new Thickness(0, 0, 0, 12));
-        DockPanel.SetDock(formCard, Dock.Top);
+        var formCard = CreateModuleCard(form, new Thickness(0, 0, 12, 0));
+        Grid.SetRow(formCard, 2);
+        Grid.SetColumn(formCard, 0);
         root.Children.Add(formCard);
+
+        var rightPanel = new DockPanel { LastChildFill = true, Margin = new Thickness(12, 0, 0, 0) };
+        Grid.SetRow(rightPanel, 2);
+        Grid.SetColumn(rightPanel, 1);
+        root.Children.Add(rightPanel);
 
         var status = new TextBlock
         {
@@ -1518,7 +1551,7 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 7, 0, 0)
         };
         DockPanel.SetDock(status, Dock.Bottom);
-        root.Children.Add(status);
+        rightPanel.Children.Add(status);
 
         var entriesList = new ListView
         {
@@ -1528,7 +1561,7 @@ public partial class MainWindow : Window
             FontFamily = (FontFamily)FindResource("HackerFont"),
             DisplayMemberPath = nameof(FieldTimelineRow.DisplayText)
         };
-        root.Children.Add(entriesList);
+        rightPanel.Children.Add(entriesList);
 
         void RefreshEntries()
         {
@@ -1683,7 +1716,12 @@ public partial class MainWindow : Window
 
     private void DigitalLab_Click(object sender, RoutedEventArgs e)
     {
-        var root = new DockPanel { Margin = new Thickness(20) };
+        var root = new Grid { Margin = new Thickness(20) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.92, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.08, GridUnitType.Star) });
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
         header.Children.Add(new TextBlock
         {
@@ -1698,7 +1736,8 @@ public partial class MainWindow : Window
             Foreground = (Brush)FindResource("MutedBrush"),
             Margin = new Thickness(0, 5, 0, 0)
         });
-        DockPanel.SetDock(header, Dock.Top);
+        Grid.SetRow(header, 0);
+        Grid.SetColumnSpan(header, 2);
         root.Children.Add(header);
 
         var casePicker = new ComboBox
@@ -1708,8 +1747,12 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             ToolTip = "Select the case for this lab"
         };
-        DockPanel.SetDock(casePicker, Dock.Top);
-        root.Children.Add(casePicker);
+        var casePickerPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+        casePickerPanel.Children.Add(CreateFormLabel("LINKED CASE"));
+        casePickerPanel.Children.Add(casePicker);
+        Grid.SetRow(casePickerPanel, 1);
+        Grid.SetColumnSpan(casePickerPanel, 2);
+        root.Children.Add(casePickerPanel);
 
         var form = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         form.Children.Add(new TextBlock
@@ -1762,23 +1805,35 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(0)
         };
+        form.Children.Add(CreateFormLabel("EXPERIMENT TITLE"));
         form.Children.Add(titleBox);
+        form.Children.Add(CreateFormLabel("ANALYSIS CATEGORY"));
         form.Children.Add(categoryBox);
+        form.Children.Add(CreateFormLabel("OBJECTIVE / HYPOTHESIS"));
         form.Children.Add(hypothesisBox);
+        form.Children.Add(CreateFormLabel("PROCEDURE / METHOD"));
         form.Children.Add(procedureBox);
         form.Children.Add(createButton);
-        var formCard = CreateModuleCard(form, new Thickness(0, 0, 0, 12));
-        DockPanel.SetDock(formCard, Dock.Top);
+        var formCard = CreateModuleCard(form, new Thickness(0, 0, 12, 0));
+        Grid.SetRow(formCard, 2);
+        Grid.SetColumn(formCard, 0);
         root.Children.Add(formCard);
+
+        var rightPanel = new DockPanel { LastChildFill = true, Margin = new Thickness(12, 0, 0, 0) };
+        Grid.SetRow(rightPanel, 2);
+        Grid.SetColumn(rightPanel, 1);
+        root.Children.Add(rightPanel);
 
         var observationPanel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
         observationPanel.Children.Add(new TextBlock
         {
             Text = "OBSERVATION FOR SELECTED EXPERIMENT",
             FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
             Foreground = (Brush)FindResource("CyanBrush"),
             Margin = new Thickness(0, 0, 0, 6)
         });
+        observationPanel.Children.Add(CreateFormLabel("RESULT / CONCLUSION"));
         var resultBox = new TextBox
         {
             Height = 38,
@@ -1786,6 +1841,7 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 7)
         };
         observationPanel.Children.Add(resultBox);
+        observationPanel.Children.Add(CreateFormLabel("OBSERVATION DETAILS"));
 
         var observationBox = new TextBox
         {
@@ -1825,14 +1881,15 @@ public partial class MainWindow : Window
             MinWidth = 160,
             Margin = new Thickness(0, 0, 7, 7)
         };
+        observationPanel.Children.Add(CreateFormLabel("OPTIONAL MEASUREMENT"));
         actionRow.Children.Add(numericBox);
         actionRow.Children.Add(unitBox);
         actionRow.Children.Add(saveResultButton);
         actionRow.Children.Add(addObservationButton);
         observationPanel.Children.Add(actionRow);
-        var observationCard = CreateModuleCard(observationPanel, new Thickness(0, 12, 0, 0));
+        var observationCard = CreateModuleCard(observationPanel, new Thickness(0, 10, 0, 0));
         DockPanel.SetDock(observationCard, Dock.Bottom);
-        root.Children.Add(observationCard);
+        rightPanel.Children.Add(observationCard);
 
         var status = new TextBlock
         {
@@ -1843,7 +1900,7 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 8, 0, 0)
         };
         DockPanel.SetDock(status, Dock.Bottom);
-        root.Children.Add(status);
+        rightPanel.Children.Add(status);
 
         var experimentList = new ListView
         {
@@ -1853,7 +1910,7 @@ public partial class MainWindow : Window
             FontFamily = (FontFamily)FindResource("HackerFont"),
             DisplayMemberPath = nameof(ExperimentArchiveRow.DisplayText)
         };
-        root.Children.Add(experimentList);
+        rightPanel.Children.Add(experimentList);
 
         void RefreshExperiments()
         {
