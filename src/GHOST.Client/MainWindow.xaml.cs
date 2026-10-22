@@ -668,7 +668,7 @@ public partial class MainWindow : Window
             !string.Equals(arguments[1], "case", StringComparison.OrdinalIgnoreCase))
         {
             AddDashboardConsoleLine(
-                "Usage: ghost case add \\"<title>\\" [--description \\"<text>\\"]  |  ghost case delete <id|case-number> --confirm",
+                "Usage: ghost case add \"<title>\" [--description \"<text>\"]  |  ghost case delete <id|case-number> --confirm",
                 Color.FromRgb(245, 196, 106), true);
             return;
         }
@@ -689,7 +689,7 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(title))
             {
                 AddDashboardConsoleLine(
-                    "Usage: ghost case add \\"<title>\\" [--description \\"<text>\\"]",
+                    "Usage: ghost case add \"<title>\" [--description \"<text>\"]",
                     Color.FromRgb(245, 196, 106), true);
                 return;
             }
