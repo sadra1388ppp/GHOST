@@ -129,7 +129,7 @@
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⚗   FIELD LAB" Click="ComingSoon_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
-                                Content="⬡   EVIDENCE VAULT" Click="ComingSoon_Click" />
+                                Content="⬡   EVIDENCE VAULT" Click="EvidenceVault_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⌘   INVESTIGATION NETWORK" Click="Network_Click" />
 
