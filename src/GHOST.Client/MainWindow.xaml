@@ -125,7 +125,7 @@
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="▤   CASE FILES" Click="Cases_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
-                                Content="⌕   DIGITAL LAB" Click="ComingSoon_Click" />
+                                Content="⌕   DIGITAL LAB" Click="DigitalLab_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⚗   FIELD LAB" Click="ComingSoon_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
