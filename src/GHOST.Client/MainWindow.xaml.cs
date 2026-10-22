@@ -4168,16 +4168,16 @@ public partial class MainWindow : Window
                 FontWeight = FontWeights.SemiBold
             });
 
-            var scriptPreview = customCommand.Script.Replace("\r", string.Empty).Replace("\n", " ↵ ");
-            if (scriptPreview.Length > 108)
-                scriptPreview = scriptPreview[..105] + "...";
+            var template = GetGhostCommandTemplates().FirstOrDefault(x =>
+                string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase));
+            var description = template?.Description ?? "Previously saved command";
             labels.Children.Add(new TextBlock
             {
-                Text = scriptPreview,
+                Text = description,
                 Foreground = (Brush)FindResource("MutedBrush"),
                 FontSize = 8,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                ToolTip = customCommand.Script,
+                ToolTip = description,
                 Margin = new Thickness(0, 3, 8, 0)
             });
             Grid.SetColumn(labels, 0);
