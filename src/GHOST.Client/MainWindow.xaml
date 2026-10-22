@@ -572,10 +572,39 @@
                             </Border>
                         </StackPanel>
                     </Grid>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,11">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="170" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="GraphSearchBox" Height="34"
+                                 ToolTip="Search node title, ID, record type, or details"
+                                 TextChanged="GraphFilter_Changed"
+                                 Margin="0,0,8,0" />
+                        <ComboBox x:Name="GraphTypeFilter" Grid.Column="1" Height="34"
+                                  SelectionChanged="GraphFilter_Changed"
+                                  Margin="0,0,8,0">
+                            <ComboBoxItem Content="All record types" IsSelected="True" />
+                            <ComboBoxItem Content="Cases" />
+                            <ComboBoxItem Content="Evidence" />
+                            <ComboBoxItem Content="Experiments" />
+                            <ComboBoxItem Content="Observations" />
+                        </ComboBox>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <Button Content="−" Width="38" ToolTip="Zoom out"
+                                    Click="GraphZoomOut_Click" Margin="0,0,5,0" />
+                            <Button Content="FIT" MinWidth="52" ToolTip="Fit graph to view"
+                                    Click="GraphFit_Click" Margin="0,0,5,0" />
+                            <Button Content="+" Width="38" ToolTip="Zoom in"
+                                    Click="GraphZoomIn_Click" Margin="0" />
+                        </StackPanel>
+                    </Grid>
                     <Border Background="#08110C" BorderBrush="#1D3024" BorderThickness="1"
                             CornerRadius="7" Padding="4">
                         <Grid>
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                            <ScrollViewer x:Name="GraphScrollViewer"
+                                          HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Auto">
                                 <Canvas x:Name="GraphCanvas" Width="1100" Height="600"
                                         Background="{StaticResource DotGridBrush}" />
@@ -584,7 +613,7 @@
                                     CornerRadius="6" Visibility="Collapsed">
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                                             MaxWidth="390">
-                                    <TextBlock Text="NO INVESTIGATION NODES" FontSize="12"
+                                    <TextBlock x:Name="GraphEmptyTitle" Text="NO INVESTIGATION NODES" FontSize="12"
                                                Foreground="{StaticResource NeonBrush}"
                                                HorizontalAlignment="Center" />
                                     <TextBlock Text="Create case records from the Command Center first. They will appear here automatically. As more evidence and experiments are added, they can be connected into your map."
