@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.IO;
 using IOPath = System.IO.Path;
 using Microsoft.Win32;
@@ -33,8 +34,11 @@ public partial class MainWindow : Window
     private List<NetworkConnectionView> _connections = [];
     private UIElement? _activeModuleContent;
     private NetworkNodeView? _selectedNetworkNode;
-    private int? _dashboardSuggestedCaseId;
-    private bool _dashboardHasCases;
+    private ulong? _previousCpuIdleTime;
+    private ulong? _previousCpuTotalTime;
+    private bool _cpuCounterAvailable;
+    private int _systemMonitorTicks;
+    private bool _systemDriveInitialized;
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
@@ -56,13 +60,14 @@ public partial class MainWindow : Window
         Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
         Top = workArea.Top + Math.Max(0, (workArea.Height - Height) / 2);
 
-        _clockTimer.Tick += (_, _) => ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
+        _clockTimer.Tick += (_, _) => RefreshSystemMonitor();
         _clockTimer.Start();
 
         Loaded += (_, _) =>
         {
             RefreshStats();
             RefreshNetwork();
+            RefreshSystemMonitor(forceDiskRefresh: true);
         };
         Closed += (_, _) => _clockTimer.Stop();
     }
@@ -181,45 +186,11 @@ public partial class MainWindow : Window
         ClosedCasesCount.Text = db.Cases.Count(x => x.Status == "Closed").ToString();
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
-        ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
-
         var recentCases = db.Cases
             .AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Take(4)
             .ToList();
-
-        // Turn the hero panel into a useful next-step prompt instead of a static slogan.
-        var latestOpenCase = db.Cases
-            .AsNoTracking()
-            .Where(x => x.Status == "Open")
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefault();
-
-        _dashboardSuggestedCaseId = latestOpenCase?.Id;
-        _dashboardHasCases = db.Cases.Any();
-
-        if (latestOpenCase is not null)
-        {
-            DashboardHeroTitle.Text = "CONTINUE YOUR LATEST CASE";
-            DashboardHeroDescription.Text =
-                $"{latestOpenCase.CaseNumber} — {latestOpenCase.Title}. Open the case workspace to review evidence and analysis.";
-            DashboardHeroActionButton.Content = "OPEN LATEST CASE";
-        }
-        else if (_dashboardHasCases)
-        {
-            DashboardHeroTitle.Text = "NO OPEN CASES RIGHT NOW";
-            DashboardHeroDescription.Text =
-                "Your saved investigations are closed. Review the case archive or create a new investigation.";
-            DashboardHeroActionButton.Content = "BROWSE CASE ARCHIVE";
-        }
-        else
-        {
-            DashboardHeroTitle.Text = "START YOUR FIRST INVESTIGATION";
-            DashboardHeroDescription.Text =
-                "Create a case to organize evidence, document analysis, and connect findings in one workspace.";
-            DashboardHeroActionButton.Content = "CREATE FIRST CASE";
-        }
 
         RecentCasesList.ItemsSource = recentCases
             .Select(x => new RecentCaseSummary(
@@ -235,22 +206,223 @@ public partial class MainWindow : Window
             : Visibility.Collapsed;
     }
 
-    private void DashboardHeroAction_Click(object sender, RoutedEventArgs e)
+    private void RefreshSystemMonitor(bool forceDiskRefresh = false)
     {
-        if (_dashboardSuggestedCaseId is int caseId)
+        ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
+        SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} LOGICAL CPUs";
+        SystemUptimeText.Text = $"SYSTEM UPTIME / {FormatUptime(Environment.TickCount64)}";
+
+        var cpuUsage = ReadCpuUsagePercent();
+        var cpuDetail = _cpuCounterAvailable
+            ? $"{Environment.ProcessorCount} logical CPUs"
+            : "Windows CPU counters unavailable";
+        if (cpuUsage is null && _cpuCounterAvailable)
+            cpuDetail = "Sampling CPU activity...";
+        UpdateUsageMetric(
+            CpuUsageBar,
+            CpuUsageText,
+            CpuUsageDetailText,
+            cpuUsage,
+            cpuDetail,
+            Color.FromRgb(99, 255, 160),
+            _cpuCounterAvailable ? "--%" : "N/A");
+
+        try
         {
-            OpenCaseWorkspace(caseId);
-            return;
+            var memory = new MemoryStatusEx
+            {
+                Length = (uint)Marshal.SizeOf<MemoryStatusEx>()
+            };
+
+            if (GlobalMemoryStatusEx(ref memory) && memory.TotalPhysicalMemory > 0)
+            {
+                var usedBytes = memory.TotalPhysicalMemory > memory.AvailablePhysicalMemory
+                    ? memory.TotalPhysicalMemory - memory.AvailablePhysicalMemory
+                    : 0UL;
+                var percentage = usedBytes * 100d / memory.TotalPhysicalMemory;
+                UpdateUsageMetric(
+                    MemoryUsageBar,
+                    MemoryUsageText,
+                    MemoryUsageDetailText,
+                    percentage,
+                    $"{FormatGiB(usedBytes)} / {FormatGiB(memory.TotalPhysicalMemory)} used",
+                    Color.FromRgb(73, 221, 248),
+                    "N/A");
+            }
+            else
+            {
+                UpdateUsageMetric(
+                    MemoryUsageBar, MemoryUsageText, MemoryUsageDetailText, null,
+                    "Physical memory information unavailable",
+                    Color.FromRgb(73, 221, 248), "N/A");
+            }
+        }
+        catch (Exception)
+        {
+            UpdateUsageMetric(
+                MemoryUsageBar, MemoryUsageText, MemoryUsageDetailText, null,
+                "Physical memory information unavailable",
+                Color.FromRgb(73, 221, 248), "N/A");
         }
 
-        if (_dashboardHasCases)
-        {
-            Cases_Click(sender, e);
-            return;
-        }
-
-        NewCase_Click(sender, e);
+        _systemMonitorTicks++;
+        if (forceDiskRefresh || !_systemDriveInitialized || _systemMonitorTicks % 10 == 0)
+            RefreshSystemDriveMetrics();
     }
+
+    private double? ReadCpuUsagePercent()
+    {
+        if (!GetSystemTimes(out var idleTime, out var kernelTime, out var userTime))
+        {
+            _cpuCounterAvailable = false;
+            return null;
+        }
+
+        _cpuCounterAvailable = true;
+        var idle = FileTimeToUInt64(idleTime);
+        var total = FileTimeToUInt64(kernelTime) + FileTimeToUInt64(userTime);
+
+        if (_previousCpuIdleTime is ulong previousIdle &&
+            _previousCpuTotalTime is ulong previousTotal)
+        {
+            var totalDelta = total - previousTotal;
+            var idleDelta = idle - previousIdle;
+
+            _previousCpuIdleTime = idle;
+            _previousCpuTotalTime = total;
+
+            if (totalDelta == 0)
+                return null;
+
+            var busyDelta = totalDelta > idleDelta ? totalDelta - idleDelta : 0UL;
+            return Math.Clamp(busyDelta * 100d / totalDelta, 0d, 100d);
+        }
+
+        // Save the first sample as a baseline; a percentage becomes valid on the next tick.
+        _previousCpuIdleTime = idle;
+        _previousCpuTotalTime = total;
+        return null;
+    }
+
+    private void RefreshSystemDriveMetrics()
+    {
+        try
+        {
+            var systemRoot = IOPath.GetPathRoot(Environment.SystemDirectory);
+            if (string.IsNullOrWhiteSpace(systemRoot))
+                throw new InvalidOperationException("The Windows system drive could not be detected.");
+
+            var drive = new DriveInfo(systemRoot);
+            if (!drive.IsReady || drive.TotalSize <= 0)
+                throw new IOException("The Windows system drive is not ready.");
+
+            var totalBytes = (ulong)drive.TotalSize;
+            var freeBytes = (ulong)Math.Max(0L, drive.AvailableFreeSpace);
+            var usedBytes = totalBytes > freeBytes ? totalBytes - freeBytes : 0UL;
+            var percentage = usedBytes * 100d / totalBytes;
+            var driveLabel = systemRoot.TrimEnd('\\');
+
+            UpdateUsageMetric(
+                DiskUsageBar,
+                DiskUsageText,
+                DiskUsageDetailText,
+                percentage,
+                $"{driveLabel} {FormatGiB(usedBytes)} / {FormatGiB(totalBytes)} used",
+                Color.FromRgb(216, 233, 138),
+                "N/A");
+        }
+        catch (Exception)
+        {
+            UpdateUsageMetric(
+                DiskUsageBar, DiskUsageText, DiskUsageDetailText, null,
+                "System drive information unavailable",
+                Color.FromRgb(216, 233, 138), "N/A");
+        }
+
+        _systemDriveInitialized = true;
+    }
+
+    private static void UpdateUsageMetric(
+        ProgressBar bar,
+        TextBlock valueText,
+        TextBlock detailText,
+        double? percentage,
+        string detail,
+        Color normalColor,
+        string unavailableLabel)
+    {
+        detailText.Text = detail;
+
+        if (percentage is not double rawPercentage || double.IsNaN(rawPercentage) ||
+            double.IsInfinity(rawPercentage))
+        {
+            valueText.Text = unavailableLabel;
+            bar.Value = 0;
+            var unavailableBrush = new SolidColorBrush(Color.FromRgb(108, 137, 156));
+            bar.Foreground = unavailableBrush;
+            valueText.Foreground = unavailableBrush;
+            return;
+        }
+
+        var safePercentage = Math.Clamp(rawPercentage, 0d, 100d);
+        var metricColor = safePercentage >= 90d
+            ? Color.FromRgb(255, 101, 122)
+            : safePercentage >= 75d
+                ? Color.FromRgb(245, 196, 106)
+                : normalColor;
+        var brush = new SolidColorBrush(metricColor);
+
+        valueText.Text = $"{safePercentage:0}%";
+        valueText.Foreground = brush;
+        bar.Foreground = brush;
+        bar.Value = safePercentage;
+    }
+
+    private static string FormatGiB(ulong bytes)
+        => $"{bytes / (1024d * 1024d * 1024d):0.0} GiB";
+
+    private static string FormatUptime(long milliseconds)
+    {
+        var uptime = TimeSpan.FromMilliseconds(Math.Max(0L, milliseconds));
+        return uptime.TotalDays >= 1d
+            ? $"{(int)uptime.TotalDays}d {uptime.Hours:00}h {uptime.Minutes:00}m"
+            : $"{uptime.Hours:00}h {uptime.Minutes:00}m";
+    }
+
+    private static ulong FileTimeToUInt64(NativeFileTime time)
+        => ((ulong)time.HighDateTime << 32) | time.LowDateTime;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeFileTime
+    {
+        public uint LowDateTime;
+        public uint HighDateTime;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatusEx
+    {
+        public uint Length;
+        public uint MemoryLoad;
+        public ulong TotalPhysicalMemory;
+        public ulong AvailablePhysicalMemory;
+        public ulong TotalPageFile;
+        public ulong AvailablePageFile;
+        public ulong TotalVirtual;
+        public ulong AvailableVirtual;
+        public ulong AvailableExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetSystemTimes(
+        out NativeFileTime idleTime,
+        out NativeFileTime kernelTime,
+        out NativeFileTime userTime);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
 
     private void NewCase_Click(object sender, RoutedEventArgs e)
     {
