@@ -127,7 +127,7 @@
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⌕   DIGITAL LAB" Click="DigitalLab_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
-                                Content="⚗   FIELD LAB" Click="ComingSoon_Click" />
+                                Content="⚗   FIELD LAB" Click="FieldLab_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⬡   EVIDENCE VAULT" Click="EvidenceVault_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
