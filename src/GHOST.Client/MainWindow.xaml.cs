@@ -39,6 +39,10 @@ public partial class MainWindow : Window
     private bool _cpuCounterAvailable;
     private int _systemMonitorTicks;
     private bool _systemDriveInitialized;
+    private const int SparklineSampleLimit = 48;
+    private readonly List<double> _cpuUsageHistory = [];
+    private readonly List<double> _memoryUsageHistory = [];
+    private readonly List<double> _diskUsageHistory = [];
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
@@ -219,13 +223,14 @@ public partial class MainWindow : Window
         if (cpuUsage is null && _cpuCounterAvailable)
             cpuDetail = "Sampling CPU activity...";
         UpdateUsageMetric(
-            CpuUsageBar,
             CpuUsageText,
             CpuUsageDetailText,
             cpuUsage,
             cpuDetail,
             Color.FromRgb(99, 255, 160),
             _cpuCounterAvailable ? "--%" : "N/A");
+        AddSparklineSample(_cpuUsageHistory, cpuUsage);
+        RefreshSparkline(_cpuUsageHistory, CpuUsageSparklineFill, CpuUsageSparklineGlow, CpuUsageSparkline);
 
         try
         {
@@ -241,28 +246,29 @@ public partial class MainWindow : Window
                     : 0UL;
                 var percentage = usedBytes * 100d / memory.TotalPhysicalMemory;
                 UpdateUsageMetric(
-                    MemoryUsageBar,
                     MemoryUsageText,
                     MemoryUsageDetailText,
                     percentage,
                     $"{FormatGiB(usedBytes)} / {FormatGiB(memory.TotalPhysicalMemory)} used",
-                    Color.FromRgb(73, 221, 248),
+                    Color.FromRgb(99, 255, 160),
                     "N/A");
+                AddSparklineSample(_memoryUsageHistory, percentage);
+                RefreshSparkline(_memoryUsageHistory, MemoryUsageSparklineFill, MemoryUsageSparklineGlow, MemoryUsageSparkline);
             }
             else
             {
                 UpdateUsageMetric(
-                    MemoryUsageBar, MemoryUsageText, MemoryUsageDetailText, null,
+                    MemoryUsageText, MemoryUsageDetailText, null,
                     "Physical memory information unavailable",
-                    Color.FromRgb(73, 221, 248), "N/A");
+                    Color.FromRgb(99, 255, 160), "N/A");
             }
         }
         catch (Exception)
         {
             UpdateUsageMetric(
-                MemoryUsageBar, MemoryUsageText, MemoryUsageDetailText, null,
+                MemoryUsageText, MemoryUsageDetailText, null,
                 "Physical memory information unavailable",
-                Color.FromRgb(73, 221, 248), "N/A");
+                Color.FromRgb(99, 255, 160), "N/A");
         }
 
         _systemMonitorTicks++;
@@ -324,27 +330,109 @@ public partial class MainWindow : Window
             var driveLabel = systemRoot.TrimEnd('\\');
 
             UpdateUsageMetric(
-                DiskUsageBar,
                 DiskUsageText,
                 DiskUsageDetailText,
                 percentage,
                 $"{driveLabel} {FormatGiB(usedBytes)} / {FormatGiB(totalBytes)} used",
-                Color.FromRgb(216, 233, 138),
+                Color.FromRgb(99, 255, 160),
                 "N/A");
+            AddSparklineSample(_diskUsageHistory, percentage);
+            RefreshSparkline(_diskUsageHistory, DiskUsageSparklineFill, DiskUsageSparklineGlow, DiskUsageSparkline);
         }
         catch (Exception)
         {
             UpdateUsageMetric(
-                DiskUsageBar, DiskUsageText, DiskUsageDetailText, null,
+                DiskUsageText, DiskUsageDetailText, null,
                 "System drive information unavailable",
-                Color.FromRgb(216, 233, 138), "N/A");
+                Color.FromRgb(99, 255, 160), "N/A");
         }
 
         _systemDriveInitialized = true;
     }
 
+    private static void AddSparklineSample(List<double> history, double? sample)
+    {
+        if (sample is not double value || double.IsNaN(value) || double.IsInfinity(value))
+            return;
+
+        history.Add(Math.Clamp(value, 0d, 100d));
+        if (history.Count > SparklineSampleLimit)
+            history.RemoveAt(0);
+    }
+
+    private static void RefreshSparkline(
+        IReadOnlyList<double> history,
+        System.Windows.Shapes.Path fillPath,
+        System.Windows.Shapes.Path glowPath,
+        System.Windows.Shapes.Path linePath)
+    {
+        var line = BuildSparklineGeometry(history, closeToBaseline: false);
+        var fill = BuildSparklineGeometry(history, closeToBaseline: true);
+        linePath.Data = line;
+        glowPath.Data = line;
+        fillPath.Data = fill;
+    }
+
+    private static Geometry? BuildSparklineGeometry(
+        IReadOnlyList<double> history,
+        bool closeToBaseline)
+    {
+        if (history.Count < 2)
+            return null;
+
+        // Use the same 0–100 domain as the percentage readout; the curve is real history,
+        // not an invented animation or an autoscaled chart that exaggerates small changes.
+        const double width = 100d;
+        const double height = 34d;
+        const double topPadding = 4d;
+        const double bottomPadding = 3d;
+        var plotHeight = height - topPadding - bottomPadding;
+        var points = new Point[history.Count];
+
+        for (var i = 0; i < history.Count; i++)
+        {
+            var x = width * i / (history.Count - 1d);
+            var y = height - bottomPadding - (Math.Clamp(history[i], 0d, 100d) / 100d * plotHeight);
+            points[i] = new Point(x, y);
+        }
+
+        var figure = new PathFigure
+        {
+            StartPoint = points[0],
+            IsClosed = closeToBaseline,
+            IsFilled = closeToBaseline
+        };
+
+        for (var i = 0; i < points.Length - 1; i++)
+        {
+            var previous = points[Math.Max(0, i - 1)];
+            var current = points[i];
+            var next = points[i + 1];
+            var following = points[Math.Min(points.Length - 1, i + 2)];
+
+            // Catmull–Rom-style control points create a smooth, curved sparkline.
+            var controlOne = new Point(
+                current.X + (next.X - previous.X) / 6d,
+                current.Y + (next.Y - previous.Y) / 6d);
+            var controlTwo = new Point(
+                next.X - (following.X - current.X) / 6d,
+                next.Y - (following.Y - current.Y) / 6d);
+
+            figure.Segments.Add(new BezierSegment(controlOne, controlTwo, next, true));
+        }
+
+        if (closeToBaseline)
+        {
+            figure.Segments.Add(new LineSegment(new Point(width, height), true));
+            figure.Segments.Add(new LineSegment(new Point(0d, height), true));
+        }
+
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(figure);
+        return geometry;
+    }
+
     private static void UpdateUsageMetric(
-        ProgressBar bar,
         TextBlock valueText,
         TextBlock detailText,
         double? percentage,
@@ -358,9 +446,7 @@ public partial class MainWindow : Window
             double.IsInfinity(rawPercentage))
         {
             valueText.Text = unavailableLabel;
-            bar.Value = 0;
             var unavailableBrush = new SolidColorBrush(Color.FromRgb(108, 137, 156));
-            bar.Foreground = unavailableBrush;
             valueText.Foreground = unavailableBrush;
             return;
         }
@@ -375,8 +461,6 @@ public partial class MainWindow : Window
 
         valueText.Text = $"{safePercentage:0}%";
         valueText.Foreground = brush;
-        bar.Foreground = brush;
-        bar.Value = safePercentage;
     }
 
     private static string FormatGiB(ulong bytes)
