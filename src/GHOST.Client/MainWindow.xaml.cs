@@ -261,6 +261,15 @@ public partial class MainWindow : Window
         DockPanel.SetDock(headingPanel, Dock.Top);
         panel.Children.Add(headingPanel);
 
+        var list = new ListView
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            Foreground = Brushes.White,
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
+        };
+
         var footer = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -331,14 +340,7 @@ public partial class MainWindow : Window
         DockPanel.SetDock(search, Dock.Top);
         panel.Children.Add(search);
 
-        var list = new ListView
-        {
-            Background = (Brush)FindResource("PanelBrush"),
-            Foreground = Brushes.White,
-            BorderBrush = (Brush)FindResource("LineBrush"),
-            FontFamily = (FontFamily)FindResource("HackerFont"),
-            DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
-        };
+
         panel.Children.Add(list);
 
         void RefreshRows()
