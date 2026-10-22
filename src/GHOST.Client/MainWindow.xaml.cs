@@ -180,6 +180,8 @@ public partial class MainWindow : Window
 
     private void InitializeDashboardConsole()
     {
+        DashboardConsoleHostText.Text =
+            $"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS";
         DashboardConsoleOutputPanel.Children.Clear();
         AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
@@ -360,6 +362,17 @@ public partial class MainWindow : Window
         }
 
         return "powershell.exe";
+    }
+
+    private void DashboardConsoleQuickCommand_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string command ||
+            string.IsNullOrWhiteSpace(command))
+            return;
+
+        DashboardConsoleInput.Text = command;
+        ExecuteDashboardPowerShellCommand();
+        DashboardConsoleInput.Focus();
     }
 
     private void DashboardConsoleInput_KeyDown(object sender, KeyEventArgs e)
