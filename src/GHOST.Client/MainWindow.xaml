@@ -203,7 +203,7 @@
                             <TextBlock Text="PRIVATE WORKSPACE  /  LOCAL INSTANCE" FontSize="8"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Text="EVIDENCE. CONTEXT. CLARITY."
+                        <TextBlock Text="FOLLOW THE EVIDENCE. CONNECT THE FACTS."
                                    FontSize="27" FontWeight="Bold" Margin="0,13,0,7"
                                    Foreground="#F0FFF4" />
                         <TextBlock Text="Manage cases, verify evidence, document analysis, and connect findings in one offline-first workspace."
