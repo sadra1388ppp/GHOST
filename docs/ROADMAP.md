@@ -9,7 +9,7 @@ The project is ready for a first daily-use release only when a user can create a
 ## Stage 0 — Stable foundation
 
 - [x] WPF/.NET 10 application shell and consistent dark theme
-- [x] SQLite database initialization under %LOCALAPPDATA%\GHOST
+- [ ] MariaDB-only database initialization and fresh-install connection validation
 - [x] Dashboard metrics and recent cases
 - [x] Create case and persist an audit record
 - [x] Investigation Network embedded in the existing MainWindow
@@ -111,8 +111,8 @@ Acceptance: a report can be regenerated from saved records and identifies what i
 
 ## Stage 7 — Backup, restore, and data resilience
 
-- [ ] Create consistent backups of SQLite plus the complete evidence store
-- [ ] Avoid copying an active SQLite database in a way that omits WAL changes; use SQLite's supported backup mechanism or a safe closed/checkpointed workflow
+- [ ] Create consistent MariaDB backups plus a manifest for the complete evidence store
+- [ ] Test MariaDB backup/restore using a transactional database dump and a separate evidence-file manifest
 - [ ] Manifest every backup with version, date, database hash, evidence file list, and hashes
 - [ ] Verify backup integrity before declaring it successful
 - [ ] Restore to a staging folder first and validate the manifest before replacing live data
@@ -127,7 +127,7 @@ Acceptance: a backup can be restored on another Windows profile and verified wit
 - [ ] Add tested encryption at rest for sensitive local records and evidence, with recovery/key-loss behavior designed first
 - [ ] Protect backups separately; do not store recovery secrets beside encrypted data
 - [ ] Use explicit ownership/access controls if multi-user support is introduced; do not pretend a local single-user app has server-grade access controls
-- [ ] Add EF Core migrations and a safe migration/backup path
+- [ ] Add EF Core migrations for MariaDB and a safe schema-upgrade/backup path
 - [ ] Add validation, bounded error messages, structured diagnostics, and recovery paths
 - [ ] Automated tests for hashing, path validation, status changes, audit logging, backup manifests, and migrations
 - [ ] UI smoke test on standard laptop and desktop resolutions, keyboard navigation, and scaling

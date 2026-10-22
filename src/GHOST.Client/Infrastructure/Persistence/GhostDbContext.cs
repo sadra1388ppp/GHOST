@@ -29,23 +29,15 @@ public sealed class GhostDbContext : DbContext
     private static string DataDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
 
-    private static string DatabasePath => Path.Combine(DataDirectory, "GHOST.db");
-
-    public static string SqliteDatabasePath => DatabasePath;
-
     public static string ProviderConfigurationPath => Path.Combine(DataDirectory, "database.json");
 
-    public static string ActiveProvider => ResolveProvider(LoadConfiguration());
+    public static string ActiveProvider => "MariaDB";
 
     public static string ActiveDatabaseTarget
     {
         get
         {
             var configuration = LoadConfiguration();
-            var provider = ResolveProvider(configuration);
-            if (provider == "SQLite")
-                return DatabasePath;
-
             try
             {
                 var connectionString = ResolveMariaDbConnectionString(configuration);
@@ -65,14 +57,6 @@ public sealed class GhostDbContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         var configuration = LoadConfiguration();
-        var provider = ResolveProvider(configuration);
-
-        if (provider == "SQLite")
-        {
-            options.UseSqlite($"Data Source={DatabasePath}");
-            return;
-        }
-
         var connectionString = ResolveMariaDbConnectionString(configuration);
         options.UseMySql(connectionString, ResolveMariaDbServerVersion(connectionString, configuration));
     }
@@ -93,7 +77,9 @@ public sealed class GhostDbContext : DbContext
 
     public static void Initialize()
     {
-        _ = LoadConfiguration();
+        var configuration = LoadConfiguration();
+        _ = ResolveMariaDbConnectionString(configuration);
+
         Directory.CreateDirectory(DataDirectory);
         Directory.CreateDirectory(Path.Combine(DataDirectory, "Evidence"));
         Directory.CreateDirectory(Path.Combine(DataDirectory, "Backups"));
@@ -115,12 +101,13 @@ public sealed class GhostDbContext : DbContext
             return defaults;
         }
 
+        GhostDatabaseConfiguration configuration;
         try
         {
-            return JsonSerializer.Deserialize<GhostDatabaseConfiguration>(
-                       File.ReadAllText(ProviderConfigurationPath),
-                       ConfigurationJsonOptions)
-                   ?? new GhostDatabaseConfiguration();
+            configuration = JsonSerializer.Deserialize<GhostDatabaseConfiguration>(
+                                File.ReadAllText(ProviderConfigurationPath),
+                                ConfigurationJsonOptions)
+                            ?? new GhostDatabaseConfiguration();
         }
         catch (JsonException ex)
         {
@@ -134,24 +121,19 @@ public sealed class GhostDbContext : DbContext
                 $"GHOST could not read its database configuration at {ProviderConfigurationPath}. {ex.Message}",
                 ex);
         }
-    }
 
-    private static string ResolveProvider(GhostDatabaseConfiguration configuration)
-    {
-        var configured = Environment.GetEnvironmentVariable("GHOST_DB_PROVIDER");
-        if (string.IsNullOrWhiteSpace(configured))
-            configured = configuration.Provider;
+        configuration.MariaDb ??= new GhostMariaDbConfiguration();
 
-        if (string.IsNullOrWhiteSpace(configured) ||
-            string.Equals(configured, "SQLite", StringComparison.OrdinalIgnoreCase))
-            return "SQLite";
+        // Upgrade old configuration files automatically. MariaDB is now the only provider.
+        if (!string.Equals(configuration.Provider, "MariaDB", StringComparison.OrdinalIgnoreCase))
+        {
+            configuration.Provider = "MariaDB";
+            File.WriteAllText(
+                ProviderConfigurationPath,
+                JsonSerializer.Serialize(configuration, ConfigurationJsonOptions));
+        }
 
-        if (string.Equals(configured, "MariaDB", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(configured, "MySQL", StringComparison.OrdinalIgnoreCase))
-            return "MariaDB";
-
-        throw new InvalidOperationException(
-            $"Unsupported GHOST database provider '{configured}'. Use 'SQLite' or 'MariaDB' in {ProviderConfigurationPath}.");
+        return configuration;
     }
 
     private static string ResolveMariaDbConnectionString(GhostDatabaseConfiguration configuration)
@@ -163,7 +145,7 @@ public sealed class GhostDbContext : DbContext
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                $"MariaDB is selected but no connection string is configured. Edit {ProviderConfigurationPath} or set GHOST_MARIADB_CONNECTION_STRING.");
+                $"GHOST now uses MariaDB only. Set MariaDb.ConnectionString in {ProviderConfigurationPath} or set GHOST_MARIADB_CONNECTION_STRING. See docs/MARIADB_SETUP.md in the repository for setup instructions.");
         }
 
         return connectionString;
@@ -196,7 +178,8 @@ public sealed class GhostDbContext : DbContext
 
 public sealed class GhostDatabaseConfiguration
 {
-    public string Provider { get; set; } = "SQLite";
+    // Retained only to upgrade existing settings files; runtime always selects MariaDB.
+    public string Provider { get; set; } = "MariaDB";
     public GhostMariaDbConfiguration MariaDb { get; set; } = new();
 }
 

@@ -1096,66 +1096,30 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostDatabase()
     {
-        var provider = GhostDbContext.ActiveProvider;
-        AddDashboardConsoleLine($"DATABASE // {provider.ToUpperInvariant()}", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine("DATABASE // MARIADB", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine($"TARGET  {GhostDbContext.ActiveDatabaseTarget}", Color.FromRgb(136, 171, 148));
 
         using var db = new GhostDbContext();
         db.Database.OpenConnection();
 
-        if (string.Equals(provider, "SQLite", StringComparison.OrdinalIgnoreCase))
-        {
-            var databasePath = GhostDbContext.SqliteDatabasePath;
-            if (!File.Exists(databasePath))
-            {
-                AddDashboardConsoleLine("SQLite database file not found at the expected path.", Color.FromRgb(255, 142, 142));
-                return;
-            }
-
-            var fileInfo = new FileInfo(databasePath);
-            AddDashboardConsoleLine($"SIZE  {fileInfo.Length / (1024d * 1024d):0.00} MiB",
-                Color.FromRgb(191, 255, 208));
-
-            using var command = db.Database.GetDbConnection().CreateCommand();
-            command.CommandText = "PRAGMA integrity_check;";
-            using var reader = command.ExecuteReader();
-            var results = new List<string>();
-            while (reader.Read())
-                results.Add(reader.GetString(0));
-
-            var healthy = results.Count > 0 &&
-                          results.All(x => string.Equals(x, "ok", StringComparison.OrdinalIgnoreCase));
-            AddDashboardConsoleLine(
-                $"INTEGRITY  {(healthy ? "OK" : "CHECK REQUIRED")}",
-                healthy ? Color.FromRgb(99, 255, 160) : Color.FromRgb(255, 142, 142),
-                true);
-
-            foreach (var result in results.Take(5))
-                AddDashboardConsoleLine($"  {result}", healthy
-                    ? Color.FromRgb(136, 171, 148)
-                    : Color.FromRgb(255, 142, 142));
-
-            return;
-        }
-
         using (var command = db.Database.GetDbConnection().CreateCommand())
         {
             command.CommandText = "SELECT DATABASE(), VERSION();";
             using var reader = command.ExecuteReader();
-            if (reader.Read())
-            {
-                var databaseName = reader.IsDBNull(0) ? "(no database selected)" : reader.GetString(0);
-                var serverVersion = reader.IsDBNull(1) ? "unknown" : reader.GetString(1);
-                AddDashboardConsoleLine("CONNECTION  OK", Color.FromRgb(99, 255, 160), true);
-                AddDashboardConsoleLine($"DATABASE    {databaseName}", Color.FromRgb(191, 255, 208));
-                AddDashboardConsoleLine($"SERVER      {serverVersion}", Color.FromRgb(136, 171, 148));
-            }
+            if (!reader.Read())
+                throw new InvalidOperationException("MariaDB did not return its database and server version.");
+
+            var databaseName = reader.IsDBNull(0) ? "(no database selected)" : reader.GetString(0);
+            var serverVersion = reader.IsDBNull(1) ? "unknown" : reader.GetString(1);
+            AddDashboardConsoleLine("CONNECTION  OK", Color.FromRgb(99, 255, 160), true);
+            AddDashboardConsoleLine($"DATABASE    {databaseName}", Color.FromRgb(191, 255, 208));
+            AddDashboardConsoleLine($"SERVER      {serverVersion}", Color.FromRgb(136, 171, 148));
         }
 
         AddDashboardConsoleLine($"CASES       {db.Cases.Count()}", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine($"EVIDENCE    {db.Evidence.Count()}", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine($"EXPERIMENTS {db.Experiments.Count()}", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("MariaDB tables are available in HeidiSQL under the database shown above.",
+        AddDashboardConsoleLine("Inspect these tables in HeidiSQL under the database shown above.",
             Color.FromRgb(136, 171, 148));
     }
 

@@ -10,8 +10,8 @@ Read this note first in a future development session, then inspect the newest ma
 - Branch: main
 - Solution: GHOST.sln
 - WPF project: src/GHOST.Client/GHOST.Client.csproj
-- Stack: C#, WPF, .NET 10, Entity Framework Core 10, SQLite
-- Local database: %LOCALAPPDATA%\GHOST\GHOST.db
+- Stack: C#, WPF, .NET 10, Entity Framework Core 10, MariaDB-only via Microting.EntityFrameworkCore.MySql
+- MariaDB connection configuration: %LOCALAPPDATA%\\GHOST\\database.json
 - Evidence/backup folders: under %LOCALAPPDATA%\GHOST
 - From repository root:
   dotnet run --project .\src\GHOST.Client\GHOST.Client.csproj
@@ -30,7 +30,7 @@ Read this note first in a future development session, then inspect the newest ma
 
 ## Implemented in current main
 
-- WPF shell, dashboard stats, recent cases, SQLite initialization.
+- WPF shell, dashboard stats, recent cases, MariaDB-only initialization (fresh-install connection still requires configuration and validation).
 - Create case and audit creation using an in-window form (no child window).
 - Case Files archive supports search, open/close, double-click to open, and a dedicated in-window case workspace. Case titles/descriptions can be edited; evidence, experiments, observations, timeline, relationships, and audit history are summarized in separate tabs. Case updates/status changes are audited.
 - Digital Lab and Field Lab now use a split-pane layout: structured entry forms on one side, saved experiment/field-entry history on the other; both retain case association, validation, and audit/timeline writes.
@@ -59,7 +59,7 @@ Follow docs/ROADMAP.md as the source of truth:
 3. Add editing and richer association flows to Digital Lab/Field Lab, including a dedicated field-record model and links from experiments to evidence.
 4. Add network relationship editing, case filters, reset-view, and visual tests for large graphs.
 5. Build timeline/report and reliable backup/restore.
-6. Add security controls, tests, migration and packaging.
+6. Add security controls, MariaDB EF Core migrations, backup/restore tests, and packaging.
 8. Validate a Windows Release build and provide exact pull/run commands.
 
 Do not claim a feature or test succeeded unless its result is observable.
