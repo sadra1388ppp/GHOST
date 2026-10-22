@@ -736,5 +736,8 @@
             </Grid>
         </Grid>
     </Grid>
+    <Grid x:Name="ModuleView" Grid.Column="1" Margin="26,20,26,22" Visibility="Collapsed">
+        <ContentControl x:Name="ModuleContent" />
+    </Grid>
     </Grid>
 </Window>
