@@ -118,24 +118,22 @@
                     <StackPanel>
                         <TextBlock Text="WORKSPACE" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                    Margin="5,0,0,8" />
-                        <Button Style="{StaticResource NavButtonStyle}"
-                                Background="#17271C" BorderBrush="#315A3C"
-                                Foreground="{StaticResource NeonBrush}"
+                        <Button x:Name="NavDashboard" Style="{StaticResource NavButtonStyle}"
                                 Content="▦   COMMAND CENTER" Click="Dashboard_Click" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavCases" Style="{StaticResource NavButtonStyle}"
                                 Content="▤   CASE FILES" Click="Cases_Click" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavDigitalLab" Style="{StaticResource NavButtonStyle}"
                                 Content="⌕   DIGITAL LAB" Click="DigitalLab_Click" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavFieldLab" Style="{StaticResource NavButtonStyle}"
                                 Content="⚗   FIELD LAB" Click="FieldLab_Click" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavEvidenceVault" Style="{StaticResource NavButtonStyle}"
                                 Content="⬡   EVIDENCE VAULT" Click="EvidenceVault_Click" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavNetwork" Style="{StaticResource NavButtonStyle}"
                                 Content="⌘   INVESTIGATION NETWORK" Click="Network_Click" />
 
                         <TextBlock Text="TOOLS" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                    Margin="5,22,0,8" />
-                        <Button Style="{StaticResource NavButtonStyle}"
+                        <Button x:Name="NavTerminal" Style="{StaticResource NavButtonStyle}"
                                 Content="&gt;_   GHOST TERMINAL" Click="Terminal_Click" />
                     </StackPanel>
                 </ScrollViewer>
@@ -420,7 +418,8 @@
                         <Grid>
                             <ListBox x:Name="RecentCasesList"
                                      ItemTemplate="{StaticResource RecentCaseTemplate}"
-                                     Background="Transparent" BorderThickness="0" />
+                                     Background="Transparent" BorderThickness="0"
+                                     MouseDoubleClick="RecentCase_DoubleClick" />
                             <StackPanel x:Name="EmptyCasesHint" HorizontalAlignment="Center"
                                         VerticalAlignment="Center" IsHitTestVisible="False">
                                 <TextBlock Text="NO CASES YET" FontSize="10"
@@ -622,6 +621,9 @@
                                    Text="Click a node to inspect its local record."
                                    FontSize="8" Foreground="{StaticResource MutedBrush}"
                                    TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="14" />
+                        <Button x:Name="OpenSelectedNodeButton" Content="OPEN SELECTED RECORD"
+                                Click="OpenSelectedNode_Click" IsEnabled="False"
+                                HorizontalAlignment="Stretch" Margin="0,12,0,0" />
                     </StackPanel>
                 </Border>
 
