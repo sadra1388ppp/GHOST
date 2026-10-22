@@ -72,6 +72,7 @@ public partial class MainWindow : Window
             RefreshStats();
             RefreshNetwork();
             RefreshSystemMonitor(forceDiskRefresh: true);
+            InitializeDashboardConsole();
         };
         Closed += (_, _) => _clockTimer.Stop();
     }
@@ -166,6 +167,178 @@ public partial class MainWindow : Window
                 }
                 : null;
         }
+    }
+
+    private void InitializeDashboardConsole()
+    {
+        DashboardConsoleOutputPanel.Children.Clear();
+        AddDashboardConsoleLine("GHOST SHELL  /  LOCAL DIAGNOSTICS", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"HOST: {Environment.MachineName}  |  SESSION: READ-ONLY",
+            Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine("Type 'help' to list available commands.", Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
+    }
+
+    private void DashboardConsoleInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        ExecuteDashboardConsoleCommand();
+        e.Handled = true;
+    }
+
+    private void DashboardConsoleRun_Click(object sender, RoutedEventArgs e)
+        => ExecuteDashboardConsoleCommand();
+
+    private void ExecuteDashboardConsoleCommand()
+    {
+        var input = DashboardConsoleInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return;
+
+        DashboardConsoleInput.Clear();
+        AddDashboardConsoleLine($"PS GHOST> {input}", Color.FromRgb(99, 255, 160), true);
+
+        switch (input.ToLowerInvariant())
+        {
+            case "help":
+            case "?":
+                AddDashboardConsoleLine("AVAILABLE LOCAL COMMANDS", Color.FromRgb(191, 255, 208), true);
+                AddDashboardConsoleLine("  help       Show this command list", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  status     Current CPU / RAM / disk readings", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  system     Host, Windows, .NET and CPU details", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  cases      Total, open and closed cases", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  evidence   Active and archived evidence", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  labs       Experiments, observations and timeline", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  uptime     Windows uptime", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  host       Device name", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  time       Local date and time", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine("  clear/cls  Clear the console", Color.FromRgb(136, 171, 148));
+                break;
+
+            case "status":
+                AddDashboardConsoleLine($"CPU LOAD      {CpuUsageText.Text}  |  {CpuUsageDetailText.Text}",
+                    Color.FromRgb(99, 255, 160));
+                AddDashboardConsoleLine($"MEMORY / RAM  {MemoryUsageText.Text}  |  {MemoryUsageDetailText.Text}",
+                    Color.FromRgb(99, 255, 160));
+                AddDashboardConsoleLine($"SYSTEM DRIVE  {DiskUsageText.Text}  |  {DiskUsageDetailText.Text}",
+                    Color.FromRgb(99, 255, 160));
+                AddDashboardConsoleLine(SystemUptimeText.Text, Color.FromRgb(136, 171, 148));
+                break;
+
+            case "system":
+                AddDashboardConsoleLine($"HOST          {Environment.MachineName}", Color.FromRgb(191, 255, 208));
+                AddDashboardConsoleLine($"OS            {Environment.OSVersion.VersionString}", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine($".NET RUNTIME  {Environment.Version}", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine($"LOGICAL CPUs  {Environment.ProcessorCount}", Color.FromRgb(136, 171, 148));
+                AddDashboardConsoleLine($"ARCHITECTURE  {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}",
+                    Color.FromRgb(136, 171, 148));
+                break;
+
+            case "cases":
+                try
+                {
+                    using var db = new GhostDbContext();
+                    var total = db.Cases.Count();
+                    var open = db.Cases.Count(x => x.Status == "Open");
+                    var closed = db.Cases.Count(x => x.Status == "Closed");
+                    AddDashboardConsoleLine($"TOTAL CASES   {total}", Color.FromRgb(191, 255, 208), true);
+                    AddDashboardConsoleLine($"OPEN          {open}", Color.FromRgb(99, 255, 160));
+                    AddDashboardConsoleLine($"CLOSED        {closed}", Color.FromRgb(136, 171, 148));
+                    AddDashboardConsoleLine($"OTHER STATUS  {Math.Max(0, total - open - closed)}",
+                        Color.FromRgb(136, 171, 148));
+                }
+                catch (Exception ex)
+                {
+                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
+                }
+                break;
+
+            case "evidence":
+                try
+                {
+                    using var db = new GhostDbContext();
+                    var active = db.Evidence.Count(x => !x.IsArchived);
+                    var archived = db.Evidence.Count(x => x.IsArchived);
+                    AddDashboardConsoleLine($"ACTIVE EVIDENCE    {active}", Color.FromRgb(191, 255, 208), true);
+                    AddDashboardConsoleLine($"ARCHIVED EVIDENCE  {archived}", Color.FromRgb(136, 171, 148));
+                    AddDashboardConsoleLine($"TOTAL RECORDS      {active + archived}", Color.FromRgb(136, 171, 148));
+                }
+                catch (Exception ex)
+                {
+                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
+                }
+                break;
+
+            case "labs":
+                try
+                {
+                    using var db = new GhostDbContext();
+                    AddDashboardConsoleLine($"EXPERIMENTS   {db.Experiments.Count()}", Color.FromRgb(191, 255, 208), true);
+                    AddDashboardConsoleLine($"OBSERVATIONS  {db.Observations.Count()}", Color.FromRgb(136, 171, 148));
+                    AddDashboardConsoleLine($"TIMELINE      {db.TimelineEvents.Count()}", Color.FromRgb(136, 171, 148));
+                    AddDashboardConsoleLine($"RELATIONSHIPS {db.Relationships.Count()}", Color.FromRgb(136, 171, 148));
+                }
+                catch (Exception ex)
+                {
+                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
+                }
+                break;
+
+            case "uptime":
+                AddDashboardConsoleLine($"SYSTEM UPTIME  {FormatUptime(Environment.TickCount64)}",
+                    Color.FromRgb(191, 255, 208), true);
+                break;
+
+            case "host":
+                AddDashboardConsoleLine(Environment.MachineName, Color.FromRgb(191, 255, 208), true);
+                break;
+
+            case "time":
+                AddDashboardConsoleLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Color.FromRgb(191, 255, 208), true);
+                break;
+
+            case "clear":
+            case "cls":
+                DashboardConsoleOutputPanel.Children.Clear();
+                AddDashboardConsoleLine("Console cleared. Type 'help' for available commands.",
+                    Color.FromRgb(136, 171, 148));
+                break;
+
+            default:
+                AddDashboardConsoleLine(
+                    $"Command not available: '{input}'. Type 'help' for GHOST's built-in commands.",
+                    Color.FromRgb(255, 177, 107));
+                AddDashboardConsoleLine("This panel is read-only and does not execute operating-system commands.",
+                    Color.FromRgb(136, 171, 148));
+                break;
+        }
+
+        AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
+    }
+
+    private void AddDashboardConsoleLine(string text, Color color, bool isBold = false)
+    {
+        var line = new TextBlock
+        {
+            Text = text,
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            FontSize = 9,
+            Foreground = new SolidColorBrush(color),
+            FontWeight = isBold ? FontWeights.SemiBold : FontWeights.Normal,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 3)
+        };
+
+        DashboardConsoleOutputPanel.Children.Add(line);
+
+        const int maxConsoleLines = 100;
+        while (DashboardConsoleOutputPanel.Children.Count > maxConsoleLines)
+            DashboardConsoleOutputPanel.Children.RemoveAt(0);
+
+        DashboardConsoleScrollViewer.ScrollToEnd();
     }
 
     private void Dashboard_Click(object sender, RoutedEventArgs e)
