@@ -184,55 +184,120 @@
                 </StackPanel>
             </Grid>
 
-            <!-- HERO PANEL -->
-            <Border Grid.Row="1" Background="{StaticResource HeroBrush}"
-                    BorderBrush="#31543B" BorderThickness="1" CornerRadius="10"
+            <!-- HERO PANEL: DFIR-IRIS-inspired operations header, localized to GHOST -->
+            <Border Grid.Row="1" Background="#0A1B2D"
+                    BorderBrush="#254968" BorderThickness="1" CornerRadius="10"
                     ClipToBounds="True" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="300" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center" Margin="26,11,12,11">
+
+                    <Border Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top"
+                            Background="#438BC7" />
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="25,10,14,10">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Background="#1B3A25" CornerRadius="4" Padding="7,4"
-                                    BorderBrush="#396C48" BorderThickness="1" Margin="0,0,9,0">
+                            <Border Background="#123453" CornerRadius="4" Padding="7,4"
+                                    BorderBrush="#2C5D84" BorderThickness="1" Margin="0,0,9,0">
                                 <TextBlock Text="NEXT ACTION" FontSize="8"
-                                           Foreground="{StaticResource NeonBrush}" />
+                                           Foreground="#8FCFFF" />
                             </Border>
-                            <TextBlock Text="CASEWORK  /  LOCAL INSTANCE" FontSize="8"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="GHOST  /  INVESTIGATION WORKSPACE" FontSize="8"
+                                       Foreground="#8FAFCB" VerticalAlignment="Center" />
                         </StackPanel>
+
                         <TextBlock x:Name="DashboardHeroTitle" Text="START YOUR FIRST INVESTIGATION"
-                                   FontSize="23" FontWeight="Bold" Margin="0,8,0,3"
-                                   Foreground="#F0FFF4" TextWrapping="Wrap" />
+                                   FontSize="21" FontWeight="Bold" Margin="0,7,0,3"
+                                   Foreground="#F1F7FC" TextWrapping="Wrap" />
+
                         <TextBlock x:Name="DashboardHeroDescription"
-                                   Text="Create a case to organize evidence, document analysis, and connect findings in one workspace."
-                                   FontSize="9" Foreground="#A9C1B0" TextWrapping="Wrap"
+                                   Text="Cases, evidence, analysis, timelines and connections — organized in one local workspace."
+                                   FontSize="9" Foreground="#B2C5D8" TextWrapping="Wrap"
                                    MaxWidth="700" />
+
                         <Button x:Name="DashboardHeroActionButton" Content="CREATE FIRST CASE"
                                 Click="DashboardHeroAction_Click" HorizontalAlignment="Left"
-                                Padding="12,6" FontSize="9" Margin="0,6,0,0" />
+                                Padding="10,5" FontSize="9" Margin="0,5,0,0"
+                                Background="#12304B" BorderBrush="#2E638D"
+                                Foreground="#B4DEFF" />
                     </StackPanel>
-                    <Grid Grid.Column="1" ClipToBounds="True">
-                        <Border Background="{StaticResource DotGridBrush}" Opacity="0.62" />
-                        <Ellipse Width="210" Height="210" Stroke="#28583A" StrokeThickness="1"
-                                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-26,0" />
-                        <Ellipse Width="156" Height="156" Stroke="#326D47" StrokeThickness="1"
-                                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,1,0" />
-                        <Ellipse Width="94" Height="94" Stroke="{StaticResource NeonBrush}" StrokeThickness="1.5"
-                                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,32,0">
-                            <Ellipse.Effect>
-                                <DropShadowEffect Color="#63FFA0" BlurRadius="18" ShadowDepth="0" Opacity="0.5" />
-                            </Ellipse.Effect>
-                        </Ellipse>
-                        <TextBlock Text="G" FontSize="54" Foreground="{StaticResource NeonBrush}"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,56,2"
-                                   Opacity="0.88" />
-                        <TextBlock Text="CASES // EVIDENCE // ANALYSIS" FontSize="8"
-                                   Foreground="#6E9A7B" HorizontalAlignment="Right"
-                                   VerticalAlignment="Bottom" Margin="0,0,21,14" />
-                    </Grid>
+
+                    <Border Grid.Column="1" Background="#0D2237"
+                            BorderBrush="#1E3E5B" BorderThickness="1" CornerRadius="7"
+                            Margin="0,11,15,11" Padding="12,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="5" Height="5" Fill="#62B9FF"
+                                         Margin="0,0,7,0" />
+                                <TextBlock Text="INVESTIGATION TOOLKIT" FontSize="8"
+                                           Foreground="#8FCFFF" />
+                            </StackPanel>
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,0,5,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="CASE FILES" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,0,0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="EVIDENCE VAULT" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,0,5,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="TIMELINE" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,0,0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="NETWORK LINKS" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="AUDIT HISTORY" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#102B44" BorderBrush="#214967"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="4" Height="4" Fill="#62B9FF"
+                                                 VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="ANALYSIS LABS" FontSize="7"
+                                                   Foreground="#D3E5F5" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
