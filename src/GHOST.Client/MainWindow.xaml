@@ -405,8 +405,8 @@
                             <Button Style="{StaticResource PanelActionButtonStyle}"
                                     Margin="0" Click="DigitalLab_Click">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="&gt;_" FontSize="14"
-                                               Foreground="{StaticResource NeonBrush}"
+                                    <TextBlock Text="⚗" FontSize="18"
+                                               Foreground="{StaticResource CyanBrush}"
                                                Margin="0,0,12,0" />
                                     <StackPanel>
                                         <TextBlock Text="Open Digital Lab" FontSize="10"
