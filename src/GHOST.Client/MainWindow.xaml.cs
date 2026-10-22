@@ -198,7 +198,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
             Color.FromRgb(245, 196, 106));
-        AddDashboardConsoleLine("Type 'ghost help' for app commands; saved custom command names also run here.",
+        AddDashboardConsoleLine("Type 'ghost help' to list all GHOST commands; native PowerShell commands run as typed.",
             Color.FromRgb(136, 171, 148));
         AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
         StartDashboardPowerShell();
@@ -3896,7 +3896,7 @@ public partial class MainWindow : Window
         };
         footer.Children.Add(new TextBlock
         {
-            Text = "NATIVE POWERSHELL  //  SHARED SESSION + HISTORY  //  CUSTOM SCRIPTS RUN AS YOUR WINDOWS USER",
+            Text = "GHOST COMMANDS PREFIXED  //  POWERSHELL RUNS AS YOUR WINDOWS USER",
             FontSize = 7,
             Foreground = new SolidColorBrush(Color.FromRgb(111, 157, 123)),
             VerticalAlignment = VerticalAlignment.Center
