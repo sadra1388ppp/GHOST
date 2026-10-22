@@ -488,6 +488,17 @@ public partial class MainWindow : Window
         RefreshRows();
     }
 
+    private void RecentCasesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        OpenRecentCaseButton.IsEnabled = RecentCasesList.SelectedItem is RecentCaseSummary;
+    }
+
+    private void OpenRecentCase_Click(object sender, RoutedEventArgs e)
+    {
+        if (RecentCasesList.SelectedItem is RecentCaseSummary selected)
+            OpenCaseWorkspace(selected.Id);
+    }
+
     private void RecentCase_DoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (RecentCasesList.SelectedItem is RecentCaseSummary selected)
