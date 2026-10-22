@@ -1242,7 +1242,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Could not open the selected record.\\n\\n{ex.Message}",
+            MessageBox.Show(this, $"Could not open the selected record.\n\n{ex.Message}",
                 "GHOST // Open record error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
