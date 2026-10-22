@@ -1,49 +1,151 @@
-# GHOST Roadmap
+# GHOST — End-to-End Product Roadmap
 
-## Milestone 0 — Foundation
-- [x] WPF solution and dark tactical theme
-- [x] Local SQLite database bootstrap
-- [x] Initial investigation models
-- [x] Dashboard and case creation/listing
-- [x] Relationship storage schema
-- [x] Build validation on Windows/.NET 10 (Release build verified through GitHub Actions)
+GHOST is an offline-first Windows investigation workspace. This roadmap is the single source of truth for building a usable, reliable release without losing the current dark workstation UI or the requirement that Investigation Network remains inside the main window.
 
-## Milestone 1 — Evidence Vault
-- Import copies of files into the local evidence vault
-- Calculate SHA-256 on import and verify integrity later
-- Archive-first deletion policy and audit history
-- Metadata inspection with explicit source/original preservation
+## Product completion criteria
 
-## Milestone 2 — Experiments
-- Scientific and physical experiment templates
-- Field notes, observations, measurements and attachments
-- Digital lab: hashes, file metadata and log inspection
+The project is ready for a first daily-use release only when a user can create and manage a case, safely import and verify evidence, record digital/field experiments and observations, connect records in the network, review a case timeline, export a report, recover from a backup, and run the app on a fresh Windows machine. Security warnings must be truthful; unencrypted data must not be presented as protected.
 
-## Milestone 3 — Investigation Network (in progress)
-- [x] Network embedded in the main window; navigation swaps in-window views
-- [x] Nodes for cases, evidence, experiments and observations
-- [x] Create and delete typed relationships with description and confidence
-- [x] Record relationship changes in the local audit log
-- [x] Visually distinguish hypothesis/contradiction links with dashed styling
-- [ ] Search and filter nodes
-- [ ] Zoom/pan and improve graph layout for large networks
-- [ ] Add nodes for timeline events and future record types
-- [ ] Record evidence provenance and mark claims verified, unverified or disputed
+## Stage 0 — Stable foundation
 
-## Milestone 4 — Reporting and resilience
-- Timeline and case reports
-- Consistent backup/restore including database and evidence files
-- Automated tests, migrations, error handling and accessibility
+- [x] WPF/.NET 10 application shell and consistent dark theme
+- [x] SQLite database initialization under %LOCALAPPDATA%\GHOST
+- [x] Dashboard metrics and recent cases
+- [x] Create case and persist an audit record
+- [x] Investigation Network embedded in the existing MainWindow
+- [x] Create/delete typed links and record relationship changes in audit history
+- [x] Windows Release build workflow
+- [x] Standard startup size with screen-aware centering and minimum constraints
+- [x] Search case archive; close/reopen a case; audit status changes
+- [ ] Fresh-install and low-resolution monitor smoke test
 
-## Integrity notes
-SHA-256 helps identify byte-for-byte changes but does not prove who created a file or whether the collection process was trustworthy. Record provenance and preserve originals.
+## Stage 1 — Case management
 
-## Security notes
-The first foundation build stores local data without database encryption. Do not store sensitive evidence until encryption at rest and backup protection are implemented.
+Goal: cases are the central containers for the rest of an investigation.
 
+- [x] Create and persist a case
+- [x] Search/filter the case archive
+- [x] Close and reopen a case with an audit entry
+- [ ] Edit case title and description
+- [ ] Show case details including evidence, experiments, observations, timeline, links, and audit entries
+- [ ] Filtering by status and sorting by date/title
+- [ ] Confirm destructive actions and prefer archive/soft-delete to permanent deletion
+- [ ] Validate required fields and enforce sensible text length limits
 
-## Current UI decisions
-- The Command Center does not display a graph preview. Investigation Network has its own workspace section inside the existing MainWindow.
-- Opening Investigation Network must never create another WPF Window; use visibility/navigation within the existing MainWindow.
-- Global typography uses Cascadia Code with Consolas fallback. The font is system-resolved and is not bundled.
-- Dashboard metrics are shown in one horizontal row: Open Cases, Closed Cases, Experiments, Evidence Items. Closed Cases uses red.
+Acceptance: every case can be found, reviewed, updated, closed, and reopened; dashboard counts update immediately; no action silently erases investigation history.
+
+## Stage 2 — Evidence Vault
+
+- [ ] Select one or more files through a native file picker
+- [ ] Copy files into the app-managed Evidence folder; never modify or move the source originals
+- [ ] Store original name, copied vault path, file size, file type, SHA-256, import time, source/provenance notes, and optional case association
+- [ ] Stream large files when hashing; avoid loading entire files into memory
+- [ ] Verify a stored file against its recorded hash on demand
+- [ ] Clearly mark missing or changed files and record the verification result in audit history
+- [ ] Archive evidence before removal; keep metadata and audit records
+- [ ] Prevent path traversal and filename collisions; use generated vault filenames
+- [ ] Surface evidence count and status in the dashboard and Investigation Network
+
+Acceptance: the app never edits the original file; an import is traceable; re-verification correctly detects a changed or missing vault copy.
+
+## Stage 3 — Digital Lab
+
+- [ ] Create experiment records linked to a case
+- [ ] Record objective, method/procedure, tools, start/end timestamps, status, result, and notes
+- [ ] Add observations to an experiment and optionally associate relevant evidence
+- [ ] Add safe, deterministic utilities first: SHA-256, file metadata, text/log viewing, and structured notes
+- [ ] Never execute untrusted evidence or arbitrary shell commands as a default action
+- [ ] Make experiment and observation records visible in the Investigation Network and case timeline
+
+Acceptance: every experiment and observation is persisted, searchable, tied to a case when applicable, and represented accurately in linked records.
+
+## Stage 4 — Field Lab
+
+- [ ] Record field notes with occurred/recorded timestamps, optional location text, observer, conditions, and narrative
+- [ ] Record named measurements with value and unit, method, and optional uncertainty
+- [ ] Attach evidence files using the same Evidence Vault workflow
+- [ ] Edit entries with an audit trail and flag corrections rather than silently rewriting the past
+- [ ] Support offline use with no external account or network requirement
+
+Acceptance: a field note or measurement retains when it happened, when it was recorded, who recorded it when available, and any correction history.
+
+## Stage 5 — Investigation Network
+
+- [x] Keep the graph inside MainWindow; navigation must not open a second network window
+- [x] Show case, evidence, experiment, and observation nodes
+- [x] Create/delete typed relationships with notes and confidence
+- [x] Audit relationship creation/deletion
+- [x] Dashed styling for hypothesis/contradiction relationships
+- [ ] Search/filter node types and case association
+- [ ] Zoom and pan; fit-to-view and reset
+- [ ] Improve layouts for larger graphs and reduce overlapping labels/edges
+- [ ] Edit a saved relationship
+- [ ] Show node details and navigate to the corresponding record
+- [ ] Add field note/timeline nodes only when the underlying records exist
+- [ ] Visually distinguish a claim from verified evidence; confidence is an investigator assessment, not proof
+
+Acceptance: the graph remains responsive as records grow and does not make an unverified claim look like a confirmed fact.
+
+## Stage 6 — Timeline and reports
+
+- [ ] Generate a per-case timeline from creation, evidence imports/verifications, experiments, observations, notes, status transitions, and relationship changes
+- [ ] Keep occurred time separate from record-created time when possible
+- [ ] Filter timeline by date, event type, and record
+- [ ] Export a human-readable case report to HTML and/or PDF, with stable ordering and metadata
+- [ ] Include source filenames, hashes, verification state, and provenance notes where applicable
+- [ ] Include clear limitations: hashes detect byte changes but do not prove authorship or authenticity
+- [ ] Record report export in audit history
+
+Acceptance: a report can be regenerated from saved records and identifies what is known, what is inferred, and what remains unverified.
+
+## Stage 7 — Backup, restore, and data resilience
+
+- [ ] Create consistent backups of SQLite plus the complete evidence store
+- [ ] Avoid copying an active SQLite database in a way that omits WAL changes; use SQLite's supported backup mechanism or a safe closed/checkpointed workflow
+- [ ] Manifest every backup with version, date, database hash, evidence file list, and hashes
+- [ ] Verify backup integrity before declaring it successful
+- [ ] Restore to a staging folder first and validate the manifest before replacing live data
+- [ ] Never overwrite the only working copy without explicit confirmation and a rollback option
+- [ ] Include restore/backup actions in audit history
+
+Acceptance: a backup can be restored on another Windows profile and verified without missing evidence or silently corrupting the database.
+
+## Stage 8 — Security and reliability
+
+- [ ] Decide and document the local threat model and what encryption does/does not protect
+- [ ] Add tested encryption at rest for sensitive local records and evidence, with recovery/key-loss behavior designed first
+- [ ] Protect backups separately; do not store recovery secrets beside encrypted data
+- [ ] Use explicit ownership/access controls if multi-user support is introduced; do not pretend a local single-user app has server-grade access controls
+- [ ] Add EF Core migrations and a safe migration/backup path
+- [ ] Add validation, bounded error messages, structured diagnostics, and recovery paths
+- [ ] Automated tests for hashing, path validation, status changes, audit logging, backup manifests, and migrations
+- [ ] UI smoke test on standard laptop and desktop resolutions, keyboard navigation, and scaling
+- [ ] Remove placeholder wording from any feature that is presented as available
+
+Acceptance: core integrity/security behavior is covered by automated tests, and unsupported protection claims are absent.
+
+## Stage 9 — Release and onboarding
+
+- [ ] Package a Release build for Windows with required runtime/native dependencies
+- [ ] Add a first-run data-folder explanation and storage/security notice
+- [ ] Add application version, diagnostics/log location, and a support/export path
+- [ ] Verify startup on a clean Windows environment
+- [ ] Test upgrade from an existing database without losing records
+- [ ] Document install, update, backup, restore, and uninstall behavior
+- [ ] Keep a changelog and record tested build artifacts
+
+Acceptance: a new user can install, launch, create a test case, import/verify a file, produce a report, and restore a backup using the included documentation.
+
+## Implementation order
+
+Build and validate one vertical slice at a time. The immediate sequence is:
+
+1. Screen-aware startup sizing and case lifecycle.
+2. Evidence import, vault storage, hashing, verification, and archival.
+3. Digital/Field Lab forms and saved observations.
+4. Network navigation and graph interaction improvements.
+5. Timeline and reports.
+6. Backup/restore.
+7. Security hardening, tests, packaging, and fresh-install validation.
+
+Do not mark a stage complete merely because the UI exists. It is complete only when persistence, validation, audit trail, error handling, and the acceptance criteria have been exercised.
