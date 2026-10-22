@@ -548,7 +548,7 @@
                     </DockPanel>
                 </Border>
 
-                <!-- GHOST SHELL: compact PowerShell-inspired, read-only local console -->
+                <!-- GHOST SHELL: compact native PowerShell console with shared command history -->
                 <Border Grid.Row="1" Grid.Column="1"
                         Background="#050906" BorderBrush="#296A3E" BorderThickness="1"
                         CornerRadius="8" Padding="0" ClipToBounds="True">
