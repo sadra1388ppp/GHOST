@@ -255,18 +255,11 @@ public partial class MainWindow : Window
         dialog.ShowDialog();
     }
 
-    private void Board_Click(object sender, RoutedEventArgs e)
+    private void Network_Click(object sender, RoutedEventArgs e)
     {
-        PageEyebrow.Text = "INTELLIGENCE / RELATIONSHIP MAPPING";
-        PageEyebrow.Visibility = Visibility.Collapsed;
-        PageTitle.Text = "Investigation Board";
-
-        MessageBox.Show(
-            this,
-            "The interactive relationship editor is planned for the next milestone. The database already includes a Relationships table.",
-            "GHOST // Board",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var window = new InvestigationNetworkWindow { Owner = this };
+        window.ShowDialog();
+        RefreshStats();
     }
 
     private void Terminal_Click(object sender, RoutedEventArgs e)

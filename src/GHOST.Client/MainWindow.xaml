@@ -130,11 +130,11 @@
                                 Content="⚗   FIELD LAB" Click="ComingSoon_Click" />
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="⬡   EVIDENCE VAULT" Click="ComingSoon_Click" />
-
-                        <TextBlock Text="ANALYSIS" FontSize="9" Foreground="{StaticResource MutedBrush}"
-                                   Margin="5,22,0,8" />
                         <Button Style="{StaticResource NavButtonStyle}"
-                                Content="⌘   INTELLIGENCE BOARD" Click="Board_Click" />
+                                Content="⌘   INVESTIGATION NETWORK" Click="Network_Click" />
+
+                        <TextBlock Text="TOOLS" FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                   Margin="5,22,0,8" />
                         <Button Style="{StaticResource NavButtonStyle}"
                                 Content="&gt;_   GHOST TERMINAL" Click="Terminal_Click" />
                     </StackPanel>
@@ -322,176 +322,78 @@
                 </Border>
             </UniformGrid>
 
-            <!-- WORKSPACE PANELS -->
+            <!-- HOME WORKSPACE: no investigation-network preview on the dashboard -->
             <Grid Grid.Row="3">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="1.3*" />
-                    <RowDefinition Height="1*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.62*" />
+                    <ColumnDefinition Width="1.35*" />
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- RELATIONSHIP MAP PREVIEW -->
-                <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
-                        Padding="17" Margin="0,0,12,12">
+                <!-- OPERATIONS DECK -->
+                <Border Grid.Row="0" Grid.ColumnSpan="2"
+                        Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="17" Margin="0,0,0,12">
                     <DockPanel LastChildFill="True">
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="INVESTIGATION NETWORK" FontSize="10"
-                                           Foreground="{StaticResource NeonBrush}" />
-                                <TextBlock Text="Visual model for evidence relationships"
-                                           FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Background="#111E16" BorderBrush="#2A4733"
-                                    BorderThickness="1" CornerRadius="5" Padding="8,5"
-                                    VerticalAlignment="Top">
-                                <TextBlock Text="BOARD PREVIEW" FontSize="8"
-                                           Foreground="{StaticResource MutedBrush}" />
-                            </Border>
-                        </Grid>
-                        <Border Background="#09110D" BorderBrush="#1D3024" BorderThickness="1"
-                                CornerRadius="6" Padding="5">
-                            <Viewbox Stretch="Uniform">
-                                <Canvas x:Name="GraphCanvas" Width="760" Height="300"
-                                        Background="{StaticResource DotGridBrush}" ClipToBounds="True">
-                                    <Line X1="178" Y1="111" X2="304" Y2="159"
-                                          Stroke="#45835A" StrokeThickness="1.5" />
-                                    <Line X1="456" Y1="159" X2="550" Y2="83"
-                                          Stroke="#45835A" StrokeThickness="1.5" />
-                                    <Line X1="456" Y1="183" X2="550" Y2="245"
-                                          Stroke="#3E8691" StrokeThickness="1.5"
-                                          StrokeDashArray="4,4" />
-                                    <Ellipse Canvas.Left="232" Canvas.Top="132" Width="6" Height="6"
-                                             Fill="{StaticResource NeonBrush}" />
-                                    <Ellipse Canvas.Left="504" Canvas.Top="118" Width="5" Height="5"
-                                             Fill="{StaticResource CyanBrush}" />
-                                    <Ellipse Canvas.Left="500" Canvas.Top="208" Width="5" Height="5"
-                                             Fill="{StaticResource CyanBrush}" />
-
-                                    <Border Canvas.Left="28" Canvas.Top="72" Width="150" Height="78"
-                                            Background="#13241A" BorderBrush="#4B9B65"
-                                            BorderThickness="1" CornerRadius="7" Padding="11">
-                                        <Border.Effect>
-                                            <DropShadowEffect Color="#63FFA0" BlurRadius="15" ShadowDepth="0" Opacity="0.14" />
-                                        </Border.Effect>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="01 / CASE FILE" FontSize="9"
-                                                       Foreground="{StaticResource NeonBrush}" />
-                                            <TextBlock Text="Primary record" FontSize="10"
-                                                       Foreground="{StaticResource TextBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Canvas.Left="304" Canvas.Top="121" Width="152" Height="78"
-                                            Background="#132020" BorderBrush="#327981"
-                                            BorderThickness="1" CornerRadius="7" Padding="11">
-                                        <Border.Effect>
-                                            <DropShadowEffect Color="#49DDF8" BlurRadius="14" ShadowDepth="0" Opacity="0.12" />
-                                        </Border.Effect>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="02 / EVIDENCE" FontSize="9"
-                                                       Foreground="{StaticResource CyanBrush}" />
-                                            <TextBlock Text="Collected item" FontSize="10"
-                                                       Foreground="{StaticResource TextBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Canvas.Left="550" Canvas.Top="42" Width="164" Height="78"
-                                            Background="#171B16" BorderBrush="#617A3C"
-                                            BorderThickness="1" CornerRadius="7" Padding="11">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="03 / EXPERIMENT" FontSize="9"
-                                                       Foreground="#D8E98A" />
-                                            <TextBlock Text="Test and results" FontSize="10"
-                                                       Foreground="{StaticResource TextBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Canvas.Left="550" Canvas.Top="207" Width="164" Height="78"
-                                            Background="#151A25" BorderBrush="#5F6393"
-                                            BorderThickness="1" CornerRadius="7" Padding="11">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="04 / OBSERVATION" FontSize="9"
-                                                       Foreground="#C9A7FF" />
-                                            <TextBlock Text="Recorded finding" FontSize="10"
-                                                       Foreground="{StaticResource TextBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Border>
-                                </Canvas>
-                            </Viewbox>
-                        </Border>
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                            <TextBlock Text="QUICK OPERATIONS" FontSize="10"
+                                       Foreground="{StaticResource NeonBrush}" />
+                            <TextBlock Text="Your next step, one click away."
+                                       FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                       Margin="0,5,0,0" />
+                        </StackPanel>
+                        <UniformGrid Columns="3">
+                            <Button Style="{StaticResource PanelActionButtonStyle}"
+                                    Margin="0,0,8,0" Click="NewCase_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="＋" FontSize="20"
+                                               Foreground="{StaticResource NeonBrush}"
+                                               Margin="0,0,12,0" />
+                                    <StackPanel>
+                                        <TextBlock Text="Create investigation" FontSize="10"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBlock Text="Open a new case file" FontSize="8"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource PanelActionButtonStyle}"
+                                    Margin="0,0,8,0" Click="Cases_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="▤" FontSize="17"
+                                               Foreground="{StaticResource CyanBrush}"
+                                               Margin="0,0,12,0" />
+                                    <StackPanel>
+                                        <TextBlock Text="Browse case archive" FontSize="10"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBlock Text="Review saved investigations" FontSize="8"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource PanelActionButtonStyle}"
+                                    Margin="0" Click="Terminal_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="&gt;_" FontSize="14"
+                                               Foreground="{StaticResource NeonBrush}"
+                                               Margin="0,0,12,0" />
+                                    <StackPanel>
+                                        <TextBlock Text="GHOST terminal" FontSize="10"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBlock Text="Local console module" FontSize="8"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
                     </DockPanel>
-                </Border>
-
-                <!-- QUICK OPERATIONS -->
-                <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
-                        Padding="17" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="QUICK OPERATIONS" FontSize="10"
-                                   Foreground="{StaticResource NeonBrush}" />
-                        <TextBlock Text="Choose your next move." FontSize="9"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,5,0,11" />
-                        <Button Style="{StaticResource PanelActionButtonStyle}"
-                                Click="NewCase_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="＋" FontSize="17" Foreground="{StaticResource NeonBrush}"
-                                           Margin="0,0,11,0" />
-                                <StackPanel>
-                                    <TextBlock Text="Create investigation" FontSize="10"
-                                               Foreground="{StaticResource TextBrush}" />
-                                    <TextBlock Text="Open a new case file" FontSize="8"
-                                               Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource PanelActionButtonStyle}"
-                                Click="Cases_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="▤" FontSize="16" Foreground="{StaticResource CyanBrush}"
-                                           Margin="0,0,12,0" />
-                                <StackPanel>
-                                    <TextBlock Text="Browse case archive" FontSize="10"
-                                               Foreground="{StaticResource TextBrush}" />
-                                    <TextBlock Text="Review locally stored cases" FontSize="8"
-                                               Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource PanelActionButtonStyle}"
-                                Click="Board_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⌘" FontSize="16" Foreground="#C9A7FF"
-                                           Margin="0,0,13,0" />
-                                <StackPanel>
-                                    <TextBlock Text="Investigation board" FontSize="10"
-                                               Foreground="{StaticResource TextBrush}" />
-                                    <TextBlock Text="Open relationship workspace" FontSize="8"
-                                               Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource PanelActionButtonStyle}"
-                                Click="Terminal_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&gt;_" FontSize="12" Foreground="{StaticResource NeonBrush}"
-                                           Margin="0,0,10,0" />
-                                <StackPanel>
-                                    <TextBlock Text="GHOST terminal" FontSize="10"
-                                               Foreground="{StaticResource TextBrush}" />
-                                    <TextBlock Text="Local console module" FontSize="8"
-                                               Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
                 </Border>
 
                 <!-- RECENT CASES -->
@@ -508,13 +410,16 @@
                                 <TextBlock Text="RECENT CASE FILES" FontSize="10"
                                            Foreground="{StaticResource NeonBrush}" />
                                 <TextBlock Text="The latest records in your local workspace"
-                                           FontSize="8" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
+                                           FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                           Margin="0,4,0,0" />
                             </StackPanel>
-                            <Button Grid.Column="1" Content="VIEW ALL  →" Style="{StaticResource NavButtonStyle}"
-                                    Click="Cases_Click" Padding="8,4" Margin="0" FontSize="8" />
+                            <Button Grid.Column="1" Content="VIEW ALL  →"
+                                    Style="{StaticResource NavButtonStyle}" Click="Cases_Click"
+                                    Padding="8,4" Margin="0" FontSize="8" />
                         </Grid>
                         <Grid>
-                            <ListBox x:Name="RecentCasesList" ItemTemplate="{StaticResource RecentCaseTemplate}"
+                            <ListBox x:Name="RecentCasesList"
+                                     ItemTemplate="{StaticResource RecentCaseTemplate}"
                                      Background="Transparent" BorderThickness="0" />
                             <StackPanel x:Name="EmptyCasesHint" HorizontalAlignment="Center"
                                         VerticalAlignment="Center" IsHitTestVisible="False">
@@ -529,10 +434,10 @@
                     </DockPanel>
                 </Border>
 
-                <!-- LOCAL INTEGRITY / NOTES -->
+                <!-- LOCAL INTEGRITY -->
                 <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
-                        Padding="17">
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="17">
                     <StackPanel>
                         <TextBlock Text="WORKSPACE INTEGRITY" FontSize="10"
                                    Foreground="{StaticResource NeonBrush}" />
@@ -559,7 +464,7 @@
                             <TextBlock Grid.Column="0" Text="!" FontSize="10"
                                        Foreground="{StaticResource AmberBrush}" />
                             <TextBlock Grid.Column="1"
-                                       Text="Evidence storage is local, but encryption at rest is not configured yet. Avoid sensitive material until security hardening is complete."
+                                       Text="Evidence is stored locally, but encryption at rest is not configured yet. Avoid sensitive material until security hardening is complete."
                                        FontSize="8" Foreground="{StaticResource MutedBrush}"
                                        TextWrapping="Wrap" LineHeight="14" />
                         </Grid>
