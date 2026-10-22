@@ -143,7 +143,7 @@
         </Border>
 
         <!-- MAIN WORKSPACE -->
-        <Grid Grid.Column="1" Margin="26,20,26,22">
+        <Grid x:Name="DashboardView" Grid.Column="1" Margin="26,20,26,22">
             <Grid.RowDefinitions>
                 <RowDefinition Height="58" />
                 <RowDefinition Height="142" />
@@ -451,5 +451,269 @@
                 </Border>
             </Grid>
         </Grid>
+    <Grid x:Name="NetworkView" Grid.Column="1" Margin="26,20,26,22" Visibility="Collapsed">
+        <Grid.Resources>
+        <DataTemplate x:Key="ConnectionTemplate">
+            <Border Background="#0D1711" BorderBrush="#263E30" BorderThickness="1"
+                    CornerRadius="6" Padding="10" Margin="0,0,0,7">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding RelationshipType}" FontSize="9"
+                                   Foreground="{StaticResource NeonBrush}" />
+                        <TextBlock Grid.Column="1" Text="{Binding ConfidenceLabel}" FontSize="8"
+                                   Foreground="{StaticResource CyanBrush}" />
+                    </Grid>
+                    <TextBlock Text="{Binding SourceLabel}" FontSize="9"
+                               Foreground="{StaticResource TextBrush}" Margin="0,7,0,2"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="↓" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock Text="{Binding TargetLabel}" FontSize="9"
+                               Foreground="{StaticResource TextBrush}" Margin="0,2,0,0"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding DescriptionPreview}" FontSize="8"
+                               Foreground="{StaticResource MutedBrush}" Margin="0,7,0,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+        </Grid.Resources>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="64" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Grid Grid.Row="0" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="GHOST / WORKSPACE / VISUAL ANALYSIS" FontSize="9"
+                           Foreground="{StaticResource NeonBrush}" />
+                <TextBlock Text="Investigation Network" FontSize="23"
+                           FontWeight="SemiBold" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="#101B15" BorderBrush="{StaticResource LineBrush}"
+                        BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,9,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="6" Height="6" Fill="{StaticResource CyanBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="LOCAL DATA" FontSize="9"
+                                   Foreground="{StaticResource CyanBrush}" />
+                    </StackPanel>
+                </Border>
+                <Button Content="↻ REFRESH" Click="Refresh_Click" Margin="0,0,8,0" />
+                <Button x:Name="NewRelationshipButton" Content="+ CREATE CONNECTION"
+                        Click="NewRelationship_Click" Margin="0,0,8,0" />
+                <Button Content="← COMMAND CENTER" Click="Dashboard_Click" />
+            </StackPanel>
+        </Grid>
+
+        <!-- NETWORK AND RIGHT SIDEBAR -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2.15*" />
+                <ColumnDefinition Width="0.95*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- GRAPH VIEW -->
+            <Border Grid.Column="0" Background="{StaticResource PanelBrush}"
+                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                    CornerRadius="9" Padding="16" Margin="0,0,13,0">
+                <DockPanel LastChildFill="True">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,13">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="RELATIONSHIP MAP" FontSize="10"
+                                       Foreground="{StaticResource NeonBrush}" />
+                            <TextBlock Text="Nodes are loaded from your saved case and evidence records."
+                                       FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                       Margin="0,5,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Border Background="#13241A" BorderBrush="#31543B" BorderThickness="1"
+                                    CornerRadius="5" Padding="8,5" Margin="0,0,7,0">
+                                <TextBlock x:Name="NodesCountText" Text="NODES // 0" FontSize="8"
+                                           Foreground="{StaticResource NeonBrush}" />
+                            </Border>
+                            <Border Background="#132126" BorderBrush="#2A5360" BorderThickness="1"
+                                    CornerRadius="5" Padding="8,5">
+                                <TextBlock x:Name="RelationshipsCountText" Text="LINKS // 0" FontSize="8"
+                                           Foreground="{StaticResource CyanBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <Border Background="#08110C" BorderBrush="#1D3024" BorderThickness="1"
+                            CornerRadius="7" Padding="4">
+                        <Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Canvas x:Name="GraphCanvas" Width="1100" Height="600"
+                                        Background="{StaticResource DotGridBrush}" />
+                            </ScrollViewer>
+                            <Border x:Name="EmptyGraphOverlay" Background="#E008110C"
+                                    CornerRadius="6" Visibility="Collapsed">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            MaxWidth="390">
+                                    <TextBlock Text="NO INVESTIGATION NODES" FontSize="12"
+                                               Foreground="{StaticResource NeonBrush}"
+                                               HorizontalAlignment="Center" />
+                                    <TextBlock Text="Create case records from the Command Center first. They will appear here automatically. As more evidence and experiments are added, they can be connected into your map."
+                                               FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                               TextAlignment="Center" TextWrapping="Wrap"
+                                               Margin="0,11,0,0" LineHeight="16" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </DockPanel>
+            </Border>
+
+            <!-- CONTROLS AND SAVED LINKS -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="SELECTED NODE" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}" />
+                        <TextBlock x:Name="SelectedNodeTitle" Text="Select a node on the map"
+                                   FontSize="12" Foreground="{StaticResource NeonBrush}"
+                                   TextWrapping="Wrap" Margin="0,9,0,0" />
+                        <TextBlock x:Name="SelectedNodeDetails"
+                                   Text="Click a node to inspect its local record."
+                                   FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="14" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="HOW THIS MAP WORKS" FontSize="9"
+                                   Foreground="{StaticResource NeonBrush}" />
+                        <TextBlock Text="Create connections between saved records. Relationship type, notes, and confidence are kept locally. Dashed links represent a hypothesis or contradiction."
+                                   FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,7,0,0" LineHeight="14" />
+                    </StackPanel>
+                </Border>
+
+                <!-- INLINE CONNECTION EDITOR: stays inside the main application window -->
+                <Border x:Name="CreateConnectionPanel" Grid.Row="2"
+                        Background="{StaticResource PanelBrush}"
+                        BorderBrush="#31543B" BorderThickness="1"
+                        CornerRadius="8" Padding="13" Margin="0,0,0,10"
+                        Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="CREATE CONNECTION" FontSize="9"
+                                   Foreground="{StaticResource NeonBrush}" />
+                        <TextBlock Text="Connect two records. A link represents an investigator-created assertion, not automatic proof."
+                                   FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,5,0,9" />
+                        <TextBlock Text="SOURCE RECORD" FontSize="8" Foreground="{StaticResource MutedBrush}" />
+                        <ComboBox x:Name="SourceRecordComboBox" Height="32"
+                                  DisplayMemberPath="DisplayText" FontSize="9"
+                                  Margin="0,3,0,7" />
+                        <TextBlock Text="TARGET RECORD" FontSize="8" Foreground="{StaticResource MutedBrush}" />
+                        <ComboBox x:Name="TargetRecordComboBox" Height="32"
+                                  DisplayMemberPath="DisplayText" FontSize="9"
+                                  Margin="0,3,0,7" />
+                        <TextBlock Text="RELATIONSHIP TYPE" FontSize="8" Foreground="{StaticResource MutedBrush}" />
+                        <ComboBox x:Name="RelationshipTypeComboBox" Height="32"
+                                  SelectedIndex="0" FontSize="9" Margin="0,3,0,7">
+                            <ComboBoxItem Content="Related to" />
+                            <ComboBoxItem Content="Supports" />
+                            <ComboBoxItem Content="Contradicts" />
+                            <ComboBoxItem Content="Derived from" />
+                            <ComboBoxItem Content="Part of" />
+                            <ComboBoxItem Content="Same source" />
+                            <ComboBoxItem Content="Observed with" />
+                            <ComboBoxItem Content="Hypothesis" />
+                        </ComboBox>
+                        <TextBlock Text="NOTES / SOURCE / REASONING" FontSize="8"
+                                   Foreground="{StaticResource MutedBrush}" />
+                        <TextBox x:Name="RelationshipNotesTextBox" Height="55"
+                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto" FontSize="9"
+                                 Margin="0,3,0,7" />
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="CONFIDENCE (INVESTIGATOR ESTIMATE)" FontSize="8"
+                                       Foreground="{StaticResource MutedBrush}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="ConfidenceValueText" Grid.Column="1"
+                                       Text="80%" FontSize="9"
+                                       Foreground="{StaticResource CyanBrush}" />
+                        </Grid>
+                        <Slider x:Name="ConfidenceSlider" Minimum="0" Maximum="1" Value="0.8"
+                                TickFrequency="0.05" SmallChange="0.05" LargeChange="0.1"
+                                IsSnapToTickEnabled="True" ValueChanged="ConfidenceSlider_ValueChanged" />
+                        <TextBlock x:Name="CreateConnectionStatus" FontSize="8"
+                                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
+                                   Margin="0,3,0,5" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="CANCEL" Width="82" Click="CancelRelationship_Click"
+                                    Margin="0,0,7,0" />
+                            <Button Content="SAVE CONNECTION" Width="145"
+                                    Click="SaveRelationship_Click" Margin="0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+
+                <Border Grid.Row="3" Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                    <DockPanel LastChildFill="True">
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,9">
+                            <TextBlock Text="SAVED CONNECTIONS" FontSize="9"
+                                       Foreground="{StaticResource NeonBrush}" />
+                            <TextBlock Text="Select a connection to inspect its notes."
+                                       FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Grid>
+                            <ListBox x:Name="ConnectionsList"
+                                     ItemTemplate="{StaticResource ConnectionTemplate}"
+                                     SelectionChanged="ConnectionsList_SelectionChanged"
+                                     Background="Transparent" BorderThickness="0" />
+                            <TextBlock x:Name="EmptyConnectionsHint"
+                                       Text="No connections yet. Use CREATE CONNECTION to link two records."
+                                       FontSize="8" Foreground="{StaticResource MutedBrush}"
+                                       TextAlignment="Center" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="8" IsHitTestVisible="False" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Button x:Name="DeleteConnectionButton" Grid.Row="4"
+                        Content="DELETE SELECTED CONNECTION" Click="DeleteConnection_Click"
+                        IsEnabled="False" Background="#2B1414" Foreground="#FFAAAA"
+                        BorderBrush="#633737" Padding="12,10" Margin="0" />
+            </Grid>
+        </Grid>
+    </Grid>
     </Grid>
 </Window>
