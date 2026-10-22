@@ -306,7 +306,7 @@ public partial class MainWindow : Window
 
             DashboardConsoleStatusText.Text = IOPath.GetFileNameWithoutExtension(executable).ToUpperInvariant();
             DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(99, 255, 160));
-            DashboardConsolePromptText.Text = "PS&gt;";
+            DashboardConsolePromptText.Text = $"PS {workingDirectory}>";
             AddDashboardConsoleLine($"Connected: {executable}", Color.FromRgb(99, 255, 160), true);
             AddDashboardConsoleLine($"Working directory: {workingDirectory}", Color.FromRgb(136, 171, 148));
         }
