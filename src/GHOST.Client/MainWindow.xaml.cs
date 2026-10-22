@@ -11,6 +11,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Globalization;
 using IOPath = System.IO.Path;
 using Microsoft.Win32;
 using GHOST.Infrastructure.Persistence;
@@ -1034,7 +1035,7 @@ public partial class MainWindow : Window
     {
         var localNow = DateTime.Now;
         ClockText.Text = localNow.ToString("HH:mm:ss");
-        ClockDateText.Text = localNow.ToString("ddd, dd MMM yyyy").ToUpperInvariant();
+        ClockDateText.Text = localNow.ToString("ddd, dd MMM yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
         SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} AVAILABLE CPUs";
         SystemUptimeText.Text = $"SYSTEM UPTIME / {FormatUptime(Environment.TickCount64)}";
 
