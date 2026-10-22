@@ -29,6 +29,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // Fit the initial window to the usable desktop area, including common laptop screens.
+        var workArea = SystemParameters.WorkArea;
+        MinWidth = Math.Min(1100, Math.Max(820, workArea.Width * 0.84));
+        MinHeight = Math.Min(700, Math.Max(600, workArea.Height * 0.82));
+        Width = Math.Min(1440, workArea.Width * 0.94);
+        Height = Math.Min(900, workArea.Height * 0.92);
+        Width = Math.Max(MinWidth, Width);
+        Height = Math.Max(MinHeight, Height);
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
+        Top = workArea.Top + Math.Max(0, (workArea.Height - Height) / 2);
+
         _clockTimer.Tick += (_, _) => ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
         _clockTimer.Start();
 
@@ -216,58 +228,155 @@ public partial class MainWindow : Window
 
     private void Cases_Click(object sender, RoutedEventArgs e)
     {
-        using var db = new GhostDbContext();
-
         var dialog = new Window
         {
             Title = "GHOST // Case Files",
-            Width = 850,
-            Height = 540,
+            Width = 930,
+            Height = 610,
+            MinWidth = 760,
+            MinHeight = 500,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = this,
             Background = (Brush)FindResource("BgBrush"),
             Foreground = Brushes.White,
-            FontFamily = (FontFamily)FindResource("HackerFont")
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            ResizeMode = ResizeMode.CanResize
         };
 
         var panel = new DockPanel { Margin = new Thickness(20) };
-        var heading = new TextBlock
+        var headingPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        headingPanel.Children.Add(new TextBlock
         {
             Text = "CASE FILES // LOCAL ARCHIVE",
             FontSize = 20,
-            Foreground = (Brush)FindResource("NeonBrush"),
-            Margin = new Thickness(0, 0, 0, 16)
+            Foreground = (Brush)FindResource("NeonBrush")
+        });
+        headingPanel.Children.Add(new TextBlock
+        {
+            Text = "Search investigations and safely change their status. Cases are retained for audit history.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        DockPanel.SetDock(headingPanel, Dock.Top);
+        panel.Children.Add(headingPanel);
+
+        var footer = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
         };
-        DockPanel.SetDock(heading, Dock.Top);
-        panel.Children.Add(heading);
+        var statusButton = new Button
+        {
+            Content = "CLOSE / REOPEN CASE",
+            MinWidth = 190,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        var close = new Button { Content = "DONE", Width = 92, Margin = new Thickness(0) };
+        close.Click += (_, _) => dialog.Close();
+        statusButton.Click += (_, _) =>
+        {
+            if (list.SelectedItem is not CaseArchiveRow selected)
+            {
+                MessageBox.Show(dialog, "Select a case first.", "GHOST",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                using var db = new GhostDbContext();
+                var item = db.Cases.FirstOrDefault(x => x.Id == selected.Id);
+                if (item is null)
+                {
+                    RefreshRows();
+                    return;
+                }
+
+                var newStatus = string.Equals(item.Status, "Closed", StringComparison.OrdinalIgnoreCase)
+                    ? "Open"
+                    : "Closed";
+                item.Status = newStatus;
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Case",
+                    EntityId = item.Id,
+                    Action = newStatus == "Closed" ? "Closed" : "Reopened",
+                    Details = $"Case {item.CaseNumber} status changed to {newStatus}."
+                });
+                db.SaveChanges();
+                RefreshRows();
+                RefreshStats();
+                RefreshNetwork();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, $"The case status could not be changed.\n\n{ex.Message}",
+                    "GHOST // Update error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        };
+        footer.Children.Add(statusButton);
+        footer.Children.Add(close);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        panel.Children.Add(footer);
+
+        var search = new TextBox
+        {
+            Height = 36,
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Search by case number, title, or status"
+        };
+        search.TextChanged += (_, _) => RefreshRows();
+        DockPanel.SetDock(search, Dock.Top);
+        panel.Children.Add(search);
 
         var list = new ListView
         {
             Background = (Brush)FindResource("PanelBrush"),
             Foreground = Brushes.White,
             BorderBrush = (Brush)FindResource("LineBrush"),
-            FontFamily = (FontFamily)FindResource("HackerFont")
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
         };
-
-        list.ItemsSource = db.Cases
-            .OrderByDescending(x => x.CreatedAt)
-            .AsNoTracking()
-            .Select(x => $"{x.CaseNumber}    |    {x.Status}    |    {x.Title}    |    {x.CreatedAt.ToLocalTime():g}")
-            .ToList();
-
         panel.Children.Add(list);
 
-        var close = new Button
+        void RefreshRows()
         {
-            Content = "CLOSE",
-            Width = 100,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 12, 0, 0)
-        };
-        close.Click += (_, _) => dialog.Close();
-        DockPanel.SetDock(close, Dock.Bottom);
-        panel.Children.Add(close);
+            try
+            {
+                var term = search.Text.Trim();
+                using var db = new GhostDbContext();
+                var records = db.Cases
+                    .AsNoTracking()
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ToList()
+                    .Select(x => new CaseArchiveRow(
+                        x.Id,
+                        x.CaseNumber,
+                        x.Title,
+                        x.Status,
+                        x.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")))
+                    .Where(x => string.IsNullOrWhiteSpace(term) ||
+                                x.CaseNumber.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                                x.Status.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var previous = (list.SelectedItem as CaseArchiveRow)?.Id;
+                list.ItemsSource = records;
+                list.SelectedItem = previous.HasValue
+                    ? records.FirstOrDefault(x => x.Id == previous.Value)
+                    : null;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, $"The case archive could not be loaded.\n\n{ex.Message}",
+                    "GHOST // Archive error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         dialog.Content = panel;
+        RefreshRows();
         dialog.ShowDialog();
     }
 
@@ -731,6 +840,17 @@ public partial class MainWindow : Window
         string Title,
         string Status,
         string CreatedAt);
+
+    private sealed record CaseArchiveRow(
+        int Id,
+        string CaseNumber,
+        string Title,
+        string Status,
+        string CreatedAt)
+    {
+        public string DisplayText =>
+            $"{CaseNumber}    |    {Status.ToUpperInvariant(),-6}    |    {Title}    |    {CreatedAt}";
+    }
 }
 
 public sealed record NetworkNodeView(string Type, int Id, string Title, string Subtitle)
