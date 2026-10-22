@@ -8,8 +8,6 @@ using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.IO;
@@ -58,13 +56,7 @@ public partial class MainWindow : Window
     private TextBlock? _terminalConsolePromptText;
     private TextBlock? _terminalConsoleStatusText;
     private TextBlock? _terminalConsoleHostText;
-    private StackPanel? _terminalCommandListPanel;
-    private TextBlock? _terminalCommandLibraryStatusText;
     private readonly List<ConsoleTranscriptEntry> _consoleTranscript = [];
-    private readonly List<GhostCustomCommand> _customCommands = [];
-    private bool _customCommandsLoaded;
-    private string GhostCustomCommandsPath => IOPath.Combine(GetGhostDataDirectory(), "custom-commands.json");
-    private string GhostDefaultCommandsMarkerPath => IOPath.Combine(GetGhostDataDirectory(), "default-command-library-v1.txt");
     private string PowerShellHistoryPath => IOPath.Combine(GetGhostDataDirectory(), "PowerShellHistory.txt");
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
@@ -200,7 +192,6 @@ public partial class MainWindow : Window
     private void InitializeDashboardConsole()
     {
         ClearConsoleTranscript();
-        LoadGhostCustomCommands();
         LoadPowerShellHistory();
         DashboardConsoleHostText.Text =
             $"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS";
@@ -480,7 +471,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine($"{DashboardConsolePromptText.Text} {command}",
             Color.FromRgb(99, 255, 160), true);
 
-        if (TryExecuteGhostApplicationCommand(command) || TryExecuteGhostCustomCommand(command))
+        if (TryExecuteGhostApplicationCommand(command))
             return;
 
         var process = _dashboardPowerShellProcess;
@@ -549,16 +540,19 @@ public partial class MainWindow : Window
             case "open":
                 RunGhostReadCommand("open", () => ExecuteGhostOpen(parts));
                 break;
-            case "commands":
-                ExecuteGhostCustomCommandList();
-                break;
-            case "run":
-                RunGhostReadCommand("run", () => ExecuteGhostCustomCommandByName(
-                    parts.Length > 2 ? parts[2] : string.Empty));
+            case "sysinfo":
+            case "processes":
+            case "ipconfig":
+            case "diskspace":
+            case "uptime":
+            case "services":
+            case "policy":
+            case "history":
+                RunGhostReadCommand(command, () => ExecuteGhostPowerShellTemplate(command));
                 break;
             default:
                 AddDashboardConsoleLine(
-                    $"Unknown GHOST command: '{command}'. Type 'ghost help' to list app commands and custom-command options.",
+                    $"Unknown GHOST command: '{command}'. Type 'ghost help' to list all built-in GHOST commands.",
                     Color.FromRgb(255, 177, 107), true);
                 break;
         }
@@ -568,20 +562,28 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostHelp()
     {
-        AddDashboardConsoleLine("GHOST // BUILT-IN APPLICATION COMMANDS", Color.FromRgb(99, 255, 160), true);
-        AddDashboardConsoleLine("ghost help              Show these commands", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost status            App + live system snapshot", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost cases             List recent case files", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost evidence          Evidence and archive totals", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost labs              Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost audit [count]     Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost network           Graph node and relationship totals", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost vault             Check evidence file presence + SHA-256 metadata", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost db                SQLite integrity + database size", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost open <id|number>  Open a case inside GHOST", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost commands          List available commands", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost run <name>        Run a saved library command", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("Custom commands run PowerShell scripts with your Windows account permissions.",
+        AddDashboardConsoleLine("GHOST // ALL BUILT-IN APPLICATION COMMANDS", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine("INVESTIGATION", Color.FromRgb(136, 171, 148), true);
+        AddDashboardConsoleLine("ghost help                 Show all built-in commands", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost status               App + live system snapshot", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost cases                List recent case files", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost evidence             Evidence and archive totals", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost labs                 Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost audit [count]        Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost network              Graph node and relationship totals", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost vault                Check evidence file presence + SHA-256 metadata", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost db                   SQLite integrity + database size", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost open <id|number>     Open a case inside GHOST", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("SYSTEM TOOLS", Color.FromRgb(136, 171, 148), true);
+        AddDashboardConsoleLine("ghost sysinfo              Windows and device details", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost processes            Top 10 running processes", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost ipconfig             Network adapter configuration", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost diskspace            Available disk space", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost uptime               Last boot and uptime", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost services             Running Windows services", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost policy               PowerShell execution policy by scope", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost history              Recent native PowerShell history", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("All GHOST app commands start with 'ghost'. Native PowerShell commands still run normally without that prefix.",
             Color.FromRgb(245, 196, 106));
     }
 
@@ -3706,90 +3708,8 @@ public partial class MainWindow : Window
 
     private UIElement BuildGhostTerminalView()
     {
-        LoadGhostCustomCommands();
-
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(290) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-        var libraryGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-        libraryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        libraryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        libraryGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        libraryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        libraryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var headingPanel = new StackPanel { Margin = new Thickness(2, 0, 0, 7) };
-        headingPanel.Children.Add(new TextBlock
-        {
-            Text = "GHOST COMMAND LIBRARY",
-            Foreground = (Brush)FindResource("NeonBrush"),
-            FontSize = 11,
-            FontWeight = FontWeights.SemiBold
-        });
-        headingPanel.Children.Add(new TextBlock
-        {
-            Text = "Eight ready-made commands. Select RUN; no script writing or setup is required.",
-            Foreground = (Brush)FindResource("MutedBrush"),
-            FontSize = 8,
-            Margin = new Thickness(0, 3, 0, 0)
-        });
-        Grid.SetColumn(headingPanel, 0);
-        Grid.SetRow(headingPanel, 0);
-        libraryGrid.Children.Add(headingPanel);
-
-        var restoreDefaultsButton = new Button
-        {
-            Content = "RESTORE DEFAULTS",
-            Padding = new Thickness(10, 6, 10, 6),
-            FontSize = 8,
-            Margin = new Thickness(12, 0, 0, 6),
-            VerticalAlignment = VerticalAlignment.Top,
-            Background = new SolidColorBrush(Color.FromRgb(20, 41, 26)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(44, 104, 64)),
-            Foreground = new SolidColorBrush(Color.FromRgb(143, 255, 177)),
-            ToolTip = "Restore the eight standard commands if you delete any of them."
-        };
-        restoreDefaultsButton.Click += RestoreDefaultGhostCommands_Click;
-        Grid.SetColumn(restoreDefaultsButton, 1);
-        Grid.SetRow(restoreDefaultsButton, 0);
-        libraryGrid.Children.Add(restoreDefaultsButton);
-
-        _terminalCommandLibraryStatusText = new TextBlock
-        {
-            Text = "READY // Commands run in the shared native PowerShell session.",
-            Foreground = (Brush)FindResource("MutedBrush"),
-            FontSize = 8,
-            Margin = new Thickness(2, 0, 0, 7),
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        Grid.SetColumn(_terminalCommandLibraryStatusText, 0);
-        Grid.SetColumnSpan(_terminalCommandLibraryStatusText, 2);
-        Grid.SetRow(_terminalCommandLibraryStatusText, 1);
-        libraryGrid.Children.Add(_terminalCommandLibraryStatusText);
-
-        _terminalCommandListPanel = new StackPanel();
-        var commandScroll = new ScrollViewer
-        {
-            Content = _terminalCommandListPanel,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-        };
-        Grid.SetRow(commandScroll, 2);
-        Grid.SetColumnSpan(commandScroll, 2);
-        libraryGrid.Children.Add(commandScroll);
-
-        var libraryBorder = new Border
-        {
-            Background = new SolidColorBrush(Color.FromRgb(8, 18, 12)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(38, 75, 49)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
-            Child = libraryGrid
-        };
-        Grid.SetRow(libraryBorder, 0);
-        root.Children.Add(libraryBorder);
 
         var shellBorder = new Border
         {
@@ -3984,7 +3904,7 @@ public partial class MainWindow : Window
         Grid.SetRow(footer, 5);
         shellGrid.Children.Add(footer);
         shellBorder.Child = shellGrid;
-        Grid.SetRow(shellBorder, 1);
+        Grid.SetRow(shellBorder, 0);
         root.Children.Add(shellBorder);
 
         SetGhostConsoleHost($"{Environment.MachineName}  //  LOCAL SESSION  //  {Environment.ProcessorCount} CPU THREADS");
@@ -3995,7 +3915,6 @@ public partial class MainWindow : Window
             SetGhostConsoleStatus("STOPPED", Color.FromRgb(255, 142, 142));
 
         ReplayConsoleTranscript(_terminalConsoleOutputPanel, _terminalConsoleScrollViewer);
-        RefreshGhostCustomCommandList();
         return root;
     }
 
@@ -4025,228 +3944,6 @@ public partial class MainWindow : Window
         new("history", "Recent commands in this PowerShell session",
             "Get-History | Select-Object -Last 15")
     ];
-
-    private void LoadGhostCustomCommands()
-    {
-        if (_customCommandsLoaded)
-            return;
-
-        _customCommandsLoaded = true;
-        try
-        {
-            if (File.Exists(GhostCustomCommandsPath))
-            {
-                var loaded = JsonSerializer.Deserialize<List<GhostCustomCommand>>(
-                    File.ReadAllText(GhostCustomCommandsPath)) ?? [];
-                foreach (var item in loaded)
-                {
-                    if (item is null ||
-                        !Regex.IsMatch(item.Name ?? string.Empty, @"^[A-Za-z][A-Za-z0-9_-]{0,31}$") ||
-                        string.Equals(item.Name, "ghost", StringComparison.OrdinalIgnoreCase) ||
-                        string.IsNullOrWhiteSpace(item.Script))
-                        continue;
-
-                    var existingIndex = _customCommands.FindIndex(x =>
-                        string.Equals(x.Name, item.Name, StringComparison.OrdinalIgnoreCase));
-                    if (existingIndex >= 0)
-                        _customCommands[existingIndex] = item;
-                    else
-                        _customCommands.Add(item);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AddDashboardConsoleLine($"Could not load the GHOST command library: {ex.Message}",
-                Color.FromRgb(255, 142, 142), true);
-        }
-
-        InstallDefaultGhostCommands(forceRestore: false);
-    }
-
-    private void InstallDefaultGhostCommands(bool forceRestore)
-    {
-        if (!forceRestore && File.Exists(GhostDefaultCommandsMarkerPath))
-            return;
-
-        var previousCommands = _customCommands.ToList();
-        foreach (var template in GetGhostCommandTemplates())
-        {
-            var index = _customCommands.FindIndex(x =>
-                string.Equals(x.Name, template.Name, StringComparison.OrdinalIgnoreCase));
-            var command = new GhostCustomCommand(template.Name, template.Script);
-            if (index >= 0)
-                _customCommands[index] = command;
-            else
-                _customCommands.Add(command);
-        }
-
-        if (!PersistGhostCustomCommands())
-        {
-            _customCommands.Clear();
-            _customCommands.AddRange(previousCommands);
-            return;
-        }
-
-        try
-        {
-            Directory.CreateDirectory(GetGhostDataDirectory());
-            File.WriteAllText(GhostDefaultCommandsMarkerPath,
-                "GHOST built-in command library v1 installed.");
-        }
-        catch (Exception ex)
-        {
-            AddDashboardConsoleLine($"Could not record default command installation: {ex.Message}",
-                Color.FromRgb(255, 177, 107), true);
-        }
-
-        RefreshGhostCustomCommandList();
-        if (_terminalCommandLibraryStatusText is not null)
-            _terminalCommandLibraryStatusText.Text = forceRestore
-                ? "DEFAULTS RESTORED // Standard commands are ready to run."
-                : "READY // Eight standard commands are installed. You can run or delete them.";
-    }
-
-    private void RestoreDefaultGhostCommands_Click(object sender, RoutedEventArgs e)
-    {
-        InstallDefaultGhostCommands(forceRestore: true);
-        RefreshGhostCustomCommandList();
-    }
-
-    private bool PersistGhostCustomCommands()
-    {
-        try
-        {
-            Directory.CreateDirectory(GetGhostDataDirectory());
-            var temporaryPath = GhostCustomCommandsPath + ".tmp";
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(
-                _customCommands, new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(temporaryPath, GhostCustomCommandsPath, overwrite: true);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            if (_terminalCommandLibraryStatusText is not null)
-                _terminalCommandLibraryStatusText.Text = $"SAVE FAILED // {ex.Message}";
-            AddDashboardConsoleLine($"Could not save the GHOST command library: {ex.Message}",
-                Color.FromRgb(255, 142, 142), true);
-            return false;
-        }
-    }
-
-    private void RefreshGhostCustomCommandList()
-    {
-        if (_terminalCommandListPanel is null)
-            return;
-
-        _terminalCommandListPanel.Children.Clear();
-        if (_customCommands.Count == 0)
-        {
-            _terminalCommandListPanel.Children.Add(new TextBlock
-            {
-                Text = "NO COMMANDS // Use RESTORE DEFAULTS to bring back the standard eight commands.",
-                Foreground = (Brush)FindResource("MutedBrush"),
-                FontSize = 9,
-                Margin = new Thickness(3, 8, 3, 0)
-            });
-            return;
-        }
-
-        foreach (var customCommand in _customCommands.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            var row = new Grid { Margin = new Thickness(0, 0, 0, 2) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            labels.Children.Add(new TextBlock
-            {
-                Text = customCommand.Name.ToUpperInvariant(),
-                Foreground = (Brush)FindResource("NeonBrush"),
-                FontSize = 10,
-                FontWeight = FontWeights.SemiBold
-            });
-
-            var template = GetGhostCommandTemplates().FirstOrDefault(x =>
-                string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase));
-            var description = template?.Description ?? "Previously saved command";
-            labels.Children.Add(new TextBlock
-            {
-                Text = description,
-                Foreground = (Brush)FindResource("MutedBrush"),
-                FontSize = 8,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                ToolTip = description,
-                Margin = new Thickness(0, 3, 8, 0)
-            });
-            Grid.SetColumn(labels, 0);
-            row.Children.Add(labels);
-
-            Button MakeSmallButton(string caption, string tooltip) => new()
-            {
-                Content = caption,
-                ToolTip = tooltip,
-                Padding = new Thickness(9, 5, 9, 5),
-                Margin = new Thickness(5, 0, 0, 0),
-                FontSize = 8,
-                VerticalAlignment = VerticalAlignment.Center,
-                Background = new SolidColorBrush(Color.FromRgb(13, 29, 18)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 220, 184))
-            };
-
-            var runButton = MakeSmallButton("RUN", "Run this command in the shared PowerShell session.");
-            runButton.Click += (_, _) => RunGhostCustomCommandFromButton(customCommand.Name);
-            Grid.SetColumn(runButton, 1);
-            row.Children.Add(runButton);
-
-            var deleteButton = MakeSmallButton("DELETE", "Remove this command from the available command list.");
-            deleteButton.Background = new SolidColorBrush(Color.FromRgb(43, 20, 20));
-            deleteButton.BorderBrush = new SolidColorBrush(Color.FromRgb(99, 55, 55));
-            deleteButton.Foreground = new SolidColorBrush(Color.FromRgb(255, 170, 170));
-            deleteButton.Click += (_, _) =>
-            {
-                var confirmation = MessageBox.Show(
-                    this,
-                    $"Delete '{customCommand.Name}' from the GHOST command library? You can restore the eight standard commands later.",
-                    "Delete Command",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-                if (confirmation != MessageBoxResult.Yes)
-                    return;
-
-                var removed = _customCommands
-                    .Where(x => string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                _customCommands.RemoveAll(x =>
-                    string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase));
-
-                if (PersistGhostCustomCommands())
-                {
-                    RefreshGhostCustomCommandList();
-                    if (_terminalCommandLibraryStatusText is not null)
-                        _terminalCommandLibraryStatusText.Text = $"DELETED // {customCommand.Name}";
-                }
-                else
-                {
-                    _customCommands.AddRange(removed);
-                    RefreshGhostCustomCommandList();
-                }
-            };
-            Grid.SetColumn(deleteButton, 2);
-            row.Children.Add(deleteButton);
-
-            _terminalCommandListPanel.Children.Add(new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(10, 22, 14)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(29, 53, 35)),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-                Padding = new Thickness(5, 6, 5, 6),
-                Child = row
-            });
-        }
-    }
 
     private void LoadPowerShellHistory()
     {
@@ -4283,67 +3980,17 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ExecuteGhostCustomCommandList()
+    private void ExecuteGhostPowerShellTemplate(string commandName)
     {
-        LoadGhostCustomCommands();
-        AddDashboardConsoleLine($"CUSTOM COMMANDS // {_customCommands.Count} SAVED",
-            Color.FromRgb(99, 255, 160), true);
-        if (_customCommands.Count == 0)
+        var template = GetGhostCommandTemplates().FirstOrDefault(x =>
+            string.Equals(x.Name, commandName, StringComparison.OrdinalIgnoreCase));
+        if (template is null)
         {
-            AddDashboardConsoleLine("No saved commands are available. Open GHOST TERMINAL and select RESTORE DEFAULTS.",
-                Color.FromRgb(136, 171, 148));
-            return;
-        }
-
-        foreach (var item in _customCommands.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-            AddDashboardConsoleLine($"{item.Name}  //  {item.Script.Replace("\r", string.Empty).Replace("\n", " ↵ ")}",
-                Color.FromRgb(191, 255, 208));
-    }
-
-    private bool TryExecuteGhostCustomCommand(string input)
-    {
-        LoadGhostCustomCommands();
-        var firstToken = input.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault() ?? string.Empty;
-        var command = _customCommands.FirstOrDefault(x =>
-            string.Equals(x.Name, firstToken, StringComparison.OrdinalIgnoreCase));
-        if (command is null)
-            return false;
-
-        ExecuteGhostCustomPowerShellScript(command);
-        return true;
-    }
-
-    private void RunGhostCustomCommandFromButton(string name)
-    {
-        var input = GetCurrentConsoleInput();
-        input.Text = name;
-        ExecuteDashboardPowerShellCommand(input);
-        input.Focus();
-    }
-
-    private void ExecuteGhostCustomCommandByName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            AddDashboardConsoleLine("Usage: ghost run <command-name>", Color.FromRgb(245, 196, 106));
-            return;
-        }
-
-        var command = _customCommands.FirstOrDefault(x =>
-            string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-        if (command is null)
-        {
-            AddDashboardConsoleLine($"Command not found: {name}. Use 'ghost commands' to list available commands.",
+            AddDashboardConsoleLine($"Unknown built-in system command: {commandName}. Type 'ghost help'.",
                 Color.FromRgb(255, 142, 142), true);
             return;
         }
 
-        ExecuteGhostCustomPowerShellScript(command);
-    }
-
-    private void ExecuteGhostCustomPowerShellScript(GhostCustomCommand command)
-    {
         var process = _dashboardPowerShellProcess;
         if (process is null || process.HasExited)
         {
@@ -4354,17 +4001,18 @@ public partial class MainWindow : Window
 
         try
         {
-            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(command.Script));
+            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(template.Script));
             var invocation = $"Invoke-Expression ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{encoded}')))";
             process.StandardInput.WriteLine(invocation);
             process.StandardInput.Flush();
         }
         catch (Exception ex)
         {
-            AddDashboardConsoleLine($"Could not run custom command '{command.Name}': {ex.Message}",
+            AddDashboardConsoleLine($"Could not run 'ghost {template.Name}': {ex.Message}",
                 Color.FromRgb(255, 142, 142), true);
         }
     }
+
     private void ComingSoon_Click(object sender, RoutedEventArgs e)
     {
         var title = (sender as Button)?.Content?.ToString() ?? "WORKSPACE MODULE";
@@ -4389,7 +4037,6 @@ public partial class MainWindow : Window
 
 
     private sealed record ConsoleTranscriptEntry(string Text, Color Color, bool IsBold);
-    private sealed record GhostCustomCommand(string Name, string Script);
     private sealed record GhostCommandTemplate(string Name, string Description, string Script);
 
     private sealed record VaultCaseOption(int Id, string CaseNumber, string Title)
