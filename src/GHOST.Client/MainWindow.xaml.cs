@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
+using System.Text;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.IO;
@@ -43,6 +44,10 @@ public partial class MainWindow : Window
     private readonly List<double> _cpuUsageHistory = [];
     private readonly List<double> _memoryUsageHistory = [];
     private readonly List<double> _diskUsageHistory = [];
+    private const string DashboardPowerShellPromptToken = "__GHOST_POWERSHELL_PROMPT__";
+    private Process? _dashboardPowerShellProcess;
+    private readonly List<string> _dashboardConsoleHistory = [];
+    private int _dashboardConsoleHistoryIndex;
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
@@ -74,7 +79,11 @@ public partial class MainWindow : Window
             RefreshSystemMonitor(forceDiskRefresh: true);
             InitializeDashboardConsole();
         };
-        Closed += (_, _) => _clockTimer.Stop();
+        Closed += (_, _) =>
+        {
+            _clockTimer.Stop();
+            StopDashboardPowerShell();
+        };
     }
 
     private void ShowModuleView(UIElement content, string title)
@@ -172,151 +181,327 @@ public partial class MainWindow : Window
     private void InitializeDashboardConsole()
     {
         DashboardConsoleOutputPanel.Children.Clear();
-        AddDashboardConsoleLine("GHOST SHELL  /  LOCAL DIAGNOSTICS", Color.FromRgb(99, 255, 160), true);
-        AddDashboardConsoleLine($"HOST: {Environment.MachineName}  |  SESSION: READ-ONLY",
+        AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
+            Color.FromRgb(245, 196, 106));
+        AddDashboardConsoleLine("Use 'help' in PowerShell for command help, or type any normal command below.",
             Color.FromRgb(136, 171, 148));
-        AddDashboardConsoleLine("Type 'help' to list available commands.", Color.FromRgb(136, 171, 148));
         AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
+        StartDashboardPowerShell();
+    }
+
+    private void StartDashboardPowerShell()
+    {
+        if (_dashboardPowerShellProcess is { HasExited: false })
+        {
+            DashboardConsoleStatusText.Text = "CONNECTED";
+            return;
+        }
+
+        StopDashboardPowerShell();
+
+        try
+        {
+            var executable = ResolvePowerShellExecutable();
+            var workingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (string.IsNullOrWhiteSpace(workingDirectory) || !Directory.Exists(workingDirectory))
+                workingDirectory = Environment.CurrentDirectory;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardInputEncoding = new UTF8Encoding(false),
+                StandardOutputEncoding = new UTF8Encoding(false),
+                StandardErrorEncoding = new UTF8Encoding(false)
+            };
+
+            startInfo.ArgumentList.Add("-NoLogo");
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-NoExit");
+            startInfo.ArgumentList.Add("-Command");
+            startInfo.ArgumentList.Add(
+                $"function global:prompt {{ '{DashboardPowerShellPromptToken}' + (Get-Location).Path + [Environment]::NewLine }}");
+
+            var process = new Process
+            {
+                StartInfo = startInfo,
+                EnableRaisingEvents = true
+            };
+
+            process.OutputDataReceived += (_, args) =>
+            {
+                if (args.Data is not string line)
+                    return;
+
+                if (line.StartsWith(DashboardPowerShellPromptToken, StringComparison.Ordinal))
+                {
+                    var currentPath = line[DashboardPowerShellPromptToken.Length..].TrimEnd('\r', '\n');
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (ReferenceEquals(_dashboardPowerShellProcess, process))
+                            DashboardConsolePromptText.Text = $"PS {currentPath}&gt;";
+                    }));
+                    return;
+                }
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ReferenceEquals(_dashboardPowerShellProcess, process))
+                        AddDashboardConsoleLine(line, Color.FromRgb(191, 255, 208));
+                }));
+            };
+
+            process.ErrorDataReceived += (_, args) =>
+            {
+                if (args.Data is not string line)
+                    return;
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ReferenceEquals(_dashboardPowerShellProcess, process))
+                        AddDashboardConsoleLine(line, Color.FromRgb(255, 142, 142));
+                }));
+            };
+
+            process.Exited += (_, _) =>
+            {
+                var exitCode = -1;
+                try
+                {
+                    exitCode = process.ExitCode;
+                }
+                catch (InvalidOperationException)
+                {
+                    // The app may be shutting down while the process exits.
+                }
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!ReferenceEquals(_dashboardPowerShellProcess, process))
+                        return;
+
+                    DashboardConsoleStatusText.Text = "STOPPED";
+                    DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+                    AddDashboardConsoleLine(
+                        $"PowerShell exited (code {exitCode}). Press RESTART to open a new session.",
+                        Color.FromRgb(255, 177, 107), true);
+                }));
+            };
+
+            if (!process.Start())
+            {
+                process.Dispose();
+                throw new InvalidOperationException("Windows did not start the PowerShell process.");
+            }
+
+            _dashboardPowerShellProcess = process;
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            DashboardConsoleStatusText.Text = IOPath.GetFileNameWithoutExtension(executable).ToUpperInvariant();
+            DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(99, 255, 160));
+            DashboardConsolePromptText.Text = "PS&gt;";
+            AddDashboardConsoleLine($"Connected: {executable}", Color.FromRgb(99, 255, 160), true);
+            AddDashboardConsoleLine($"Working directory: {workingDirectory}", Color.FromRgb(136, 171, 148));
+        }
+        catch (Exception ex)
+        {
+            DashboardConsoleStatusText.Text = "START FAILED";
+            DashboardConsoleStatusText.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+            AddDashboardConsoleLine($"Could not start PowerShell: {ex.Message}",
+                Color.FromRgb(255, 142, 142), true);
+            AddDashboardConsoleLine("Install Windows PowerShell (included with Windows) or PowerShell 7, then press RESTART.",
+                Color.FromRgb(136, 171, 148));
+        }
+    }
+
+    private static string ResolvePowerShellExecutable()
+    {
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        if (!string.IsNullOrWhiteSpace(programFiles))
+        {
+            var powershell7 = IOPath.Combine(programFiles, "PowerShell", "7", "pwsh.exe");
+            if (File.Exists(powershell7))
+                return powershell7;
+        }
+
+        var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (var directory in pathValue.Split(IOPath.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmedDirectory = directory.Trim().Trim('"');
+            if (trimmedDirectory.Length == 0)
+                continue;
+
+            try
+            {
+                var candidate = IOPath.Combine(trimmedDirectory, "pwsh.exe");
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (ArgumentException)
+            {
+                // Ignore malformed PATH entries and keep searching.
+            }
+        }
+
+        var windowsFolder = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (!string.IsNullOrWhiteSpace(windowsFolder))
+        {
+            var windowsPowerShell = IOPath.Combine(
+                windowsFolder, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+            if (File.Exists(windowsPowerShell))
+                return windowsPowerShell;
+        }
+
+        return "powershell.exe";
     }
 
     private void DashboardConsoleInput_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter)
+        if (e.Key == Key.Enter)
+        {
+            ExecuteDashboardPowerShellCommand();
+            e.Handled = true;
             return;
+        }
 
-        ExecuteDashboardConsoleCommand();
-        e.Handled = true;
+        if (e.Key == Key.Up && _dashboardConsoleHistory.Count > 0)
+        {
+            if (_dashboardConsoleHistoryIndex > 0)
+                _dashboardConsoleHistoryIndex--;
+
+            DashboardConsoleInput.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
+            DashboardConsoleInput.CaretIndex = DashboardConsoleInput.Text.Length;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Down && _dashboardConsoleHistory.Count > 0)
+        {
+            if (_dashboardConsoleHistoryIndex < _dashboardConsoleHistory.Count - 1)
+            {
+                _dashboardConsoleHistoryIndex++;
+                DashboardConsoleInput.Text = _dashboardConsoleHistory[_dashboardConsoleHistoryIndex];
+            }
+            else
+            {
+                _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+                DashboardConsoleInput.Clear();
+            }
+
+            DashboardConsoleInput.CaretIndex = DashboardConsoleInput.Text.Length;
+            e.Handled = true;
+        }
     }
 
     private void DashboardConsoleRun_Click(object sender, RoutedEventArgs e)
-        => ExecuteDashboardConsoleCommand();
+        => ExecuteDashboardPowerShellCommand();
 
-    private void ExecuteDashboardConsoleCommand()
+    private void DashboardConsoleRestart_Click(object sender, RoutedEventArgs e)
     {
-        var input = DashboardConsoleInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(input))
+        StopDashboardPowerShell();
+        DashboardConsoleOutputPanel.Children.Clear();
+        _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+        StartDashboardPowerShell();
+    }
+
+    private void ExecuteDashboardPowerShellCommand()
+    {
+        var command = DashboardConsoleInput.Text.TrimEnd();
+        if (string.IsNullOrWhiteSpace(command))
             return;
 
         DashboardConsoleInput.Clear();
-        AddDashboardConsoleLine($"PS GHOST> {input}", Color.FromRgb(99, 255, 160), true);
-
-        switch (input.ToLowerInvariant())
+        if (_dashboardConsoleHistory.Count == 0 ||
+            !string.Equals(_dashboardConsoleHistory[^1], command, StringComparison.Ordinal))
         {
-            case "help":
-            case "?":
-                AddDashboardConsoleLine("AVAILABLE LOCAL COMMANDS", Color.FromRgb(191, 255, 208), true);
-                AddDashboardConsoleLine("  help       Show this command list", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  status     Current CPU / RAM / disk readings", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  system     Host, Windows, .NET and CPU details", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  cases      Total, open and closed cases", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  evidence   Active and archived evidence", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  labs       Experiments, observations and timeline", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  uptime     Windows uptime", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  host       Device name", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  time       Local date and time", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine("  clear/cls  Clear the console", Color.FromRgb(136, 171, 148));
-                break;
-
-            case "status":
-                AddDashboardConsoleLine($"CPU LOAD      {CpuUsageText.Text}  |  {CpuUsageDetailText.Text}",
-                    Color.FromRgb(99, 255, 160));
-                AddDashboardConsoleLine($"MEMORY / RAM  {MemoryUsageText.Text}  |  {MemoryUsageDetailText.Text}",
-                    Color.FromRgb(99, 255, 160));
-                AddDashboardConsoleLine($"SYSTEM DRIVE  {DiskUsageText.Text}  |  {DiskUsageDetailText.Text}",
-                    Color.FromRgb(99, 255, 160));
-                AddDashboardConsoleLine(SystemUptimeText.Text, Color.FromRgb(136, 171, 148));
-                break;
-
-            case "system":
-                AddDashboardConsoleLine($"HOST          {Environment.MachineName}", Color.FromRgb(191, 255, 208));
-                AddDashboardConsoleLine($"OS            {Environment.OSVersion.VersionString}", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine($".NET RUNTIME  {Environment.Version}", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine($"LOGICAL CPUs  {Environment.ProcessorCount}", Color.FromRgb(136, 171, 148));
-                AddDashboardConsoleLine($"ARCHITECTURE  {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}",
-                    Color.FromRgb(136, 171, 148));
-                break;
-
-            case "cases":
-                try
-                {
-                    using var db = new GhostDbContext();
-                    var total = db.Cases.Count();
-                    var open = db.Cases.Count(x => x.Status == "Open");
-                    var closed = db.Cases.Count(x => x.Status == "Closed");
-                    AddDashboardConsoleLine($"TOTAL CASES   {total}", Color.FromRgb(191, 255, 208), true);
-                    AddDashboardConsoleLine($"OPEN          {open}", Color.FromRgb(99, 255, 160));
-                    AddDashboardConsoleLine($"CLOSED        {closed}", Color.FromRgb(136, 171, 148));
-                    AddDashboardConsoleLine($"OTHER STATUS  {Math.Max(0, total - open - closed)}",
-                        Color.FromRgb(136, 171, 148));
-                }
-                catch (Exception ex)
-                {
-                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
-                }
-                break;
-
-            case "evidence":
-                try
-                {
-                    using var db = new GhostDbContext();
-                    var active = db.Evidence.Count(x => !x.IsArchived);
-                    var archived = db.Evidence.Count(x => x.IsArchived);
-                    AddDashboardConsoleLine($"ACTIVE EVIDENCE    {active}", Color.FromRgb(191, 255, 208), true);
-                    AddDashboardConsoleLine($"ARCHIVED EVIDENCE  {archived}", Color.FromRgb(136, 171, 148));
-                    AddDashboardConsoleLine($"TOTAL RECORDS      {active + archived}", Color.FromRgb(136, 171, 148));
-                }
-                catch (Exception ex)
-                {
-                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
-                }
-                break;
-
-            case "labs":
-                try
-                {
-                    using var db = new GhostDbContext();
-                    AddDashboardConsoleLine($"EXPERIMENTS   {db.Experiments.Count()}", Color.FromRgb(191, 255, 208), true);
-                    AddDashboardConsoleLine($"OBSERVATIONS  {db.Observations.Count()}", Color.FromRgb(136, 171, 148));
-                    AddDashboardConsoleLine($"TIMELINE      {db.TimelineEvents.Count()}", Color.FromRgb(136, 171, 148));
-                    AddDashboardConsoleLine($"RELATIONSHIPS {db.Relationships.Count()}", Color.FromRgb(136, 171, 148));
-                }
-                catch (Exception ex)
-                {
-                    AddDashboardConsoleLine($"DATABASE READ ERROR: {ex.Message}", Color.FromRgb(255, 177, 107));
-                }
-                break;
-
-            case "uptime":
-                AddDashboardConsoleLine($"SYSTEM UPTIME  {FormatUptime(Environment.TickCount64)}",
-                    Color.FromRgb(191, 255, 208), true);
-                break;
-
-            case "host":
-                AddDashboardConsoleLine(Environment.MachineName, Color.FromRgb(191, 255, 208), true);
-                break;
-
-            case "time":
-                AddDashboardConsoleLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                    Color.FromRgb(191, 255, 208), true);
-                break;
-
-            case "clear":
-            case "cls":
-                DashboardConsoleOutputPanel.Children.Clear();
-                AddDashboardConsoleLine("Console cleared. Type 'help' for available commands.",
-                    Color.FromRgb(136, 171, 148));
-                break;
-
-            default:
-                AddDashboardConsoleLine(
-                    $"Command not available: '{input}'. Type 'help' for GHOST's built-in commands.",
-                    Color.FromRgb(255, 177, 107));
-                AddDashboardConsoleLine("This panel is read-only and does not execute operating-system commands.",
-                    Color.FromRgb(136, 171, 148));
-                break;
+            _dashboardConsoleHistory.Add(command);
+            if (_dashboardConsoleHistory.Count > 500)
+                _dashboardConsoleHistory.RemoveAt(0);
         }
 
-        AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
+        _dashboardConsoleHistoryIndex = _dashboardConsoleHistory.Count;
+
+        if (string.Equals(command.Trim(), "clear", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(command.Trim(), "cls", StringComparison.OrdinalIgnoreCase))
+        {
+            DashboardConsoleOutputPanel.Children.Clear();
+            AddDashboardConsoleLine("Console cleared.", Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        AddDashboardConsoleLine($"{DashboardConsolePromptText.Text} {command}",
+            Color.FromRgb(99, 255, 160), true);
+
+        var process = _dashboardPowerShellProcess;
+        if (process is null || process.HasExited)
+        {
+            AddDashboardConsoleLine("PowerShell is not running. Press RESTART to reconnect.",
+                Color.FromRgb(255, 177, 107), true);
+            return;
+        }
+
+        try
+        {
+            process.StandardInput.WriteLine(command);
+            process.StandardInput.Flush();
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine($"Could not send input to PowerShell: {ex.Message}",
+                Color.FromRgb(255, 142, 142), true);
+        }
+    }
+
+    private void StopDashboardPowerShell()
+    {
+        var process = _dashboardPowerShellProcess;
+        _dashboardPowerShellProcess = null;
+
+        if (process is null)
+            return;
+
+        try
+        {
+            if (!process.HasExited)
+            {
+                try
+                {
+                    process.StandardInput.WriteLine("exit");
+                    process.StandardInput.Flush();
+                }
+                catch (IOException)
+                {
+                    // Standard input can close first when PowerShell has already exited.
+                }
+
+                if (!process.WaitForExit(500))
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(500);
+                }
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // The process ended during shutdown.
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Windows may deny access if the process already ended or cannot be queried.
+        }
+        finally
+        {
+            process.Dispose();
+        }
+
+        DashboardConsoleStatusText.Text = "STOPPED";
     }
 
     private void AddDashboardConsoleLine(string text, Color color, bool isBold = false)
@@ -334,7 +519,7 @@ public partial class MainWindow : Window
 
         DashboardConsoleOutputPanel.Children.Add(line);
 
-        const int maxConsoleLines = 100;
+        const int maxConsoleLines = 1000;
         while (DashboardConsoleOutputPanel.Children.Count > maxConsoleLines)
             DashboardConsoleOutputPanel.Children.RemoveAt(0);
 
