@@ -33,6 +33,8 @@ public partial class MainWindow : Window
     private List<NetworkConnectionView> _connections = [];
     private UIElement? _activeModuleContent;
     private NetworkNodeView? _selectedNetworkNode;
+    private int? _dashboardSuggestedCaseId;
+    private bool _dashboardHasCases;
     private int? _selectedCaseId;
     private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
@@ -187,6 +189,38 @@ public partial class MainWindow : Window
             .Take(4)
             .ToList();
 
+        // Turn the hero panel into a useful next-step prompt instead of a static slogan.
+        var latestOpenCase = db.Cases
+            .AsNoTracking()
+            .Where(x => x.Status == "Open")
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefault();
+
+        _dashboardSuggestedCaseId = latestOpenCase?.Id;
+        _dashboardHasCases = db.Cases.Any();
+
+        if (latestOpenCase is not null)
+        {
+            DashboardHeroTitle.Text = "CONTINUE YOUR LATEST CASE";
+            DashboardHeroDescription.Text =
+                $"{latestOpenCase.CaseNumber} — {latestOpenCase.Title}. Open the case workspace to review evidence and analysis.";
+            DashboardHeroActionButton.Content = "OPEN LATEST CASE";
+        }
+        else if (_dashboardHasCases)
+        {
+            DashboardHeroTitle.Text = "NO OPEN CASES RIGHT NOW";
+            DashboardHeroDescription.Text =
+                "Your saved investigations are closed. Review the case archive or create a new investigation.";
+            DashboardHeroActionButton.Content = "BROWSE CASE ARCHIVE";
+        }
+        else
+        {
+            DashboardHeroTitle.Text = "START YOUR FIRST INVESTIGATION";
+            DashboardHeroDescription.Text =
+                "Create a case to organize evidence, document analysis, and connect findings in one workspace.";
+            DashboardHeroActionButton.Content = "CREATE FIRST CASE";
+        }
+
         RecentCasesList.ItemsSource = recentCases
             .Select(x => new RecentCaseSummary(
                 x.Id,
@@ -199,6 +233,23 @@ public partial class MainWindow : Window
         EmptyCasesHint.Visibility = recentCases.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private void DashboardHeroAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (_dashboardSuggestedCaseId is int caseId)
+        {
+            OpenCaseWorkspace(caseId);
+            return;
+        }
+
+        if (_dashboardHasCases)
+        {
+            Cases_Click(sender, e);
+            return;
+        }
+
+        NewCase_Click(sender, e);
     }
 
     private void NewCase_Click(object sender, RoutedEventArgs e)
