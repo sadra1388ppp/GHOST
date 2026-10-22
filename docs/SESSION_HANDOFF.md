@@ -31,18 +31,19 @@ Read this note first in a future development session, then inspect the newest ma
 
 - WPF shell, dashboard stats, recent cases, SQLite initialization.
 - Create case and audit creation using an in-window form (no child window).
-- Searchable Case Files archive with Open/Closed transitions, rendered in the shared main-window content host. Status changes create audit entries and refresh dashboard/network counts.
-- Digital Lab: create case-linked experiments with category, hypothesis, procedure and results; add text/numeric observations; audit changes and create case timeline events. New experiments are selected after saving.
-- Field Lab: create case-linked field notes or measurements with optional location and numeric value/unit; entries are persisted as timeline events and audit history. This is a first pass using timeline records, not a dedicated field-record data model.
-- Investigation Network is embedded in the same MainWindow.
-- Graph nodes for case, evidence, experiments, and observations; create/delete relationships with notes/confidence and audit records.
+- Case Files archive supports search, open/close, double-click to open, and a dedicated in-window case workspace. Case titles/descriptions can be edited; evidence, experiments, observations, timeline, relationships, and audit history are summarized in separate tabs. Case updates/status changes are audited.
+- Digital Lab and Field Lab now use a split-pane layout: structured entry forms on one side, saved experiment/field-entry history on the other; both retain case association, validation, and audit/timeline writes.
+- Evidence Vault performs first-pass imports through a native file picker, copies source files (never moves/edits them) into %LOCALAPPDATA%\GHOST\Evidence with generated names, streams SHA-256, shows metadata, verifies stored bytes, audits verification results, archives/restores records, and reveals copies in File Explorer. GHOST does not execute evidence files from the vault.
+- Investigation Network is embedded in the same MainWindow. Nodes are organized in type lanes, searchable and type-filterable, with zoom/fit controls, relationship display, and OPEN SELECTED RECORD navigation to the underlying case/evidence/experiment.
+- Workspace navigation highlights the active sidebar item with a green background/border and neon text.
 - Windows CI workflow at .github/workflows/windows-build.yml.
 
 ## Still not complete / critical limitations
 
-- The app has NOT been run locally on the user's machine by the assistant. Static source inspection confirms workspace handlers no longer create child Windows or call ShowDialog; run the Windows build before treating this as verified.
-- Latest startup sizing, case archive, Digital Lab, and Field Lab changes must be validated by the latest Windows Actions workflow before claiming a successful build.
-- Evidence Vault remains a placeholder. Digital Lab and Field Lab have first-pass data-entry flows but need broader validation, record editing, evidence associations, and more complete specialized data models.
+- The app has NOT been run locally on the user's machine by the assistant, and a successful Windows build has not been confirmed in this session. Run the latest main commit through Windows Actions and a local smoke test before claiming verified build/runtime success.
+- Evidence Vault is a first functional pass, not release-complete: provenance/source notes are not yet collected, file size is computed for display rather than persisted as record metadata, and verification requires manual invocation.
+- Digital Lab and Field Lab have functional first-pass forms but need broader validation, editing workflows, experiment/evidence associations, and a dedicated field-record data model.
+- Network editing of saved links, case-association filters, and a reset-view action remain incomplete.
 - No completed timeline/reporting/backup-and-restore workflow yet.
 - Database encryption at rest and protected backups are not implemented. Do not recommend storing sensitive evidence.
 - SHA-256 identifies byte-for-byte changes but does not independently prove authenticity, authorship, or provenance.
@@ -52,13 +53,12 @@ Read this note first in a future development session, then inspect the newest ma
 
 Follow docs/ROADMAP.md as the source of truth:
 
-1. Check current main, inspect latest CI.
-2. Finish/verify the current case archive status workflow and screen-aware window sizing.
-3. Implement Evidence Vault: copy originals (never move/edit), stream SHA-256, record provenance, verify/flag changes, archive with audit.
-4. Test and improve Digital Lab/Field Lab workflows: edit records, show observation history, associate evidence, and use a dedicated field record model.
-5. Improve graph search/filter/zoom/pan/edit.
-6. Build timeline/report and reliable backup/restore.
-7. Add security controls, tests, migration and packaging.
+1. Check current main, run Windows Actions/build and test the workspace navigation, case editor, vault import/verification, and graph interactions.
+2. Finish evidence metadata: persist file size and capture source/provenance notes; add tests for missing/mismatched files and path handling.
+3. Add editing and richer association flows to Digital Lab/Field Lab, including a dedicated field-record model and links from experiments to evidence.
+4. Add network relationship editing, case filters, reset-view, and visual tests for large graphs.
+5. Build timeline/report and reliable backup/restore.
+6. Add security controls, tests, migration and packaging.
 8. Validate a Windows Release build and provide exact pull/run commands.
 
 Do not claim a feature or test succeeded unless its result is observable.
