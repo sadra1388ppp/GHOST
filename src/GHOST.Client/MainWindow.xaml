@@ -550,20 +550,25 @@
 
                 <!-- GHOST SHELL: compact PowerShell-inspired, read-only local console -->
                 <Border Grid.Row="1" Grid.Column="1"
-                        Background="#050906" BorderBrush="#315C3D" BorderThickness="1"
+                        Background="#050906" BorderBrush="#296A3E" BorderThickness="1"
                         CornerRadius="8" Padding="0" ClipToBounds="True">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#39FF81" BlurRadius="16"
+                                          ShadowDepth="0" Opacity="0.12" />
+                    </Border.Effect>
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="34" />
+                            <RowDefinition Height="40" />
+                            <RowDefinition Height="28" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="18" />
                         </Grid.RowDefinitions>
 
-                        <!-- Terminal chrome -->
-                        <Border Grid.Row="0" Background="#111A13"
-                                BorderBrush="#25452D" BorderThickness="0,0,0,1">
-                            <Grid Margin="10,0,10,0">
+                        <!-- Hacker-console chrome -->
+                        <Border Grid.Row="0" Background="#0D170F"
+                                BorderBrush="#285337" BorderThickness="0,0,0,1">
+                            <Grid Margin="10,1,10,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -576,8 +581,12 @@
                                     <Ellipse Width="7" Height="7" Fill="#244B31" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="GHOST SHELL" FontSize="9"
-                                               FontWeight="SemiBold" Foreground="#BFFFD0" />
+                                    <TextBlock Text="GHOST // COMMAND DECK" FontSize="9"
+                                               FontWeight="Bold" Foreground="#D6FFE0" />
+                                    <TextBlock x:Name="DashboardConsoleHostText"
+                                               Text="LOCAL SESSION / INITIALIZING"
+                                               FontSize="7" Foreground="#6F9D7B"
+                                               Margin="0,2,0,0" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -587,26 +596,61 @@
                                         <TextBlock x:Name="DashboardConsoleStatusText" Text="STARTING"
                                                    FontSize="7" Foreground="#63FFA0" />
                                     </Border>
-                                    <Button Content="RESTART" Click="DashboardConsoleRestart_Click"
+                                    <Button Content="↻ RESTART" Click="DashboardConsoleRestart_Click"
                                             Padding="6,3" FontSize="7" Margin="5,0,0,0"
-                                            Background="#14291A" BorderBrush="#28563A"
-                                            Foreground="#9DFFC1" />
+                                            Background="#14291A" BorderBrush="#34764B"
+                                            Foreground="#B5FFC8" />
                                 </StackPanel>
                             </Grid>
                         </Border>
 
-                        <!-- Scrollable command history -->
-                        <ScrollViewer x:Name="DashboardConsoleScrollViewer" Grid.Row="1"
-                                      Background="#050906"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel x:Name="DashboardConsoleOutputPanel"
-                                        Margin="11,8,9,3" />
-                        </ScrollViewer>
+                        <!-- Compact quick-run command strip -->
+                        <Border Grid.Row="1" Background="#071009"
+                                BorderBrush="#142D1B" BorderThickness="0,0,0,1"
+                                Padding="7,1">
+                            <DockPanel LastChildFill="False" VerticalAlignment="Center">
+                                <TextBlock Text="QUICK RUN" FontSize="7" FontWeight="Bold"
+                                           Foreground="#5F8F6C" VerticalAlignment="Center"
+                                           Margin="2,0,7,0" />
+                                <Button Content="PWD" Tag="Get-Location"
+                                        Click="DashboardConsoleQuickCommand_Click"
+                                        Padding="6,2" FontSize="7" Margin="2,0"
+                                        Background="#0D1C11" BorderBrush="#244B30"
+                                        Foreground="#9DFFC1" ToolTip="Run Get-Location" />
+                                <Button Content="PROCESSES" Tag="Get-Process | Select-Object -First 5"
+                                        Click="DashboardConsoleQuickCommand_Click"
+                                        Padding="6,2" FontSize="7" Margin="2,0"
+                                        Background="#0D1C11" BorderBrush="#244B30"
+                                        Foreground="#9DFFC1" ToolTip="Show the first five processes" />
+                                <Button Content="FILES" Tag="Get-ChildItem -Force | Select-Object -First 8"
+                                        Click="DashboardConsoleQuickCommand_Click"
+                                        Padding="6,2" FontSize="7" Margin="2,0"
+                                        Background="#0D1C11" BorderBrush="#244B30"
+                                        Foreground="#9DFFC1" ToolTip="List the first eight items in the current directory" />
+                                <Button Content="PS INFO" Tag="$PSVersionTable"
+                                        Click="DashboardConsoleQuickCommand_Click"
+                                        Padding="6,2" FontSize="7" Margin="2,0"
+                                        Background="#0D1C11" BorderBrush="#244B30"
+                                        Foreground="#9DFFC1" ToolTip="Show PowerShell version details" />
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Scrollable command history over a subtle technical grid -->
+                        <Grid Grid.Row="2" Background="#050906">
+                            <Border Background="{StaticResource DotGridBrush}"
+                                    Opacity="0.11" IsHitTestVisible="False" />
+                            <ScrollViewer x:Name="DashboardConsoleScrollViewer"
+                                          Background="Transparent"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="DashboardConsoleOutputPanel"
+                                            Margin="11,8,9,3" />
+                            </ScrollViewer>
+                        </Grid>
 
                         <!-- Command prompt -->
-                        <Border Grid.Row="2" Background="#0B130D"
-                                BorderBrush="#23472E" BorderThickness="0,1,0,0"
+                        <Border Grid.Row="3" Background="#0A140D"
+                                BorderBrush="#2A5738" BorderThickness="0,1,0,0"
                                 Padding="9,7">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -633,11 +677,18 @@
                             </Grid>
                         </Border>
 
-                        <!-- Safe mode indicator -->
-                        <Border Grid.Row="3" Background="#0B130D" Padding="10,1">
-                            <TextBlock Text="NATIVE POWERSHELL  //  RUNS WITH YOUR CURRENT WINDOWS PERMISSIONS"
-                                       FontSize="7" Foreground="#668A70"
-                                       VerticalAlignment="Center" />
+                        <!-- Native session telemetry -->
+                        <Border Grid.Row="4" Background="#071009" Padding="10,1">
+                            <DockPanel>
+                                <TextBlock Text="●" FontSize="7" Foreground="#63FFA0"
+                                           VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <TextBlock Text="NATIVE POWERSHELL  //  STDOUT + STDERR  //  SESSION PERSISTENT"
+                                           FontSize="7" Foreground="#6F9D7B"
+                                           VerticalAlignment="Center" />
+                                <TextBlock DockPanel.Dock="Right" Text="GHOST / PS"
+                                           FontSize="7" Foreground="#3E6849"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
                         </Border>
                     </Grid>
                 </Border>
