@@ -35,29 +35,30 @@ public partial class InvestigationNetworkWindow : Window
         {
             using var db = new GhostDbContext();
 
+            // Materialize records before building display labels. ToUpperInvariant is a
+            // .NET presentation operation, not something we want translated into SQL.
+            var cases = db.Cases.AsNoTracking().OrderBy(x => x.CreatedAt).ToList();
+            var evidence = db.Evidence.AsNoTracking()
+                .Where(x => !x.IsArchived)
+                .OrderBy(x => x.CollectedAt)
+                .ToList();
+            var experiments = db.Experiments.AsNoTracking()
+                .OrderBy(x => x.CreatedAt)
+                .ToList();
+            var observations = db.Observations.AsNoTracking()
+                .OrderBy(x => x.RecordedAt)
+                .ToList();
+
             _nodes =
             [
-                .. db.Cases.AsNoTracking()
-                    .OrderBy(x => x.CreatedAt)
-                    .Select(x => new NetworkNodeView("Case", x.Id, x.CaseNumber,
-                        $"{x.Status.ToUpperInvariant()}  /  {x.Title}"))
-                    .ToList(),
-                .. db.Evidence.AsNoTracking()
-                    .Where(x => !x.IsArchived)
-                    .OrderBy(x => x.CollectedAt)
-                    .Select(x => new NetworkNodeView("Evidence", x.Id, x.Title,
-                        $"{x.EvidenceType.ToUpperInvariant()}  /  ID {x.Id}"))
-                    .ToList(),
-                .. db.Experiments.AsNoTracking()
-                    .OrderBy(x => x.CreatedAt)
-                    .Select(x => new NetworkNodeView("Experiment", x.Id, x.Title,
-                        $"{x.Category.ToUpperInvariant()}  /  {x.Status.ToUpperInvariant()}"))
-                    .ToList(),
-                .. db.Observations.AsNoTracking()
-                    .OrderBy(x => x.RecordedAt)
-                    .Select(x => new NetworkNodeView("Observation", x.Id, x.Description,
-                        $"RECORDED  /  ID {x.Id}"))
-                    .ToList()
+                .. cases.Select(x => new NetworkNodeView("Case", x.Id, x.CaseNumber,
+                    $"{x.Status.ToUpperInvariant()}  /  {x.Title}")),
+                .. evidence.Select(x => new NetworkNodeView("Evidence", x.Id, x.Title,
+                    $"{x.EvidenceType.ToUpperInvariant()}  /  ID {x.Id}")),
+                .. experiments.Select(x => new NetworkNodeView("Experiment", x.Id, x.Title,
+                    $"{x.Category.ToUpperInvariant()}  /  {x.Status.ToUpperInvariant()}")),
+                .. observations.Select(x => new NetworkNodeView("Observation", x.Id, x.Description,
+                    $"RECORDED  /  ID {x.Id}"))
             ];
 
             var nodeLookup = _nodes.ToDictionary(x => x.Key, x => x);
