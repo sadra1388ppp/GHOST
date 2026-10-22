@@ -209,12 +209,12 @@ public partial class MainWindow : Window
     private void RefreshSystemMonitor(bool forceDiskRefresh = false)
     {
         ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
-        SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} LOGICAL CPUs";
+        SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} AVAILABLE CPUs";
         SystemUptimeText.Text = $"SYSTEM UPTIME / {FormatUptime(Environment.TickCount64)}";
 
         var cpuUsage = ReadCpuUsagePercent();
         var cpuDetail = _cpuCounterAvailable
-            ? $"{Environment.ProcessorCount} logical CPUs"
+            ? $"{Environment.ProcessorCount} available logical CPUs"
             : "Windows CPU counters unavailable";
         if (cpuUsage is null && _cpuCounterAvailable)
             cpuDetail = "Sampling CPU activity...";
@@ -317,7 +317,7 @@ public partial class MainWindow : Window
                 throw new IOException("The Windows system drive is not ready.");
 
             var totalBytes = (ulong)drive.TotalSize;
-            var freeBytes = (ulong)Math.Max(0L, drive.AvailableFreeSpace);
+            // TotalFreeSpace reflects the whole volume; AvailableFreeSpace may be quota-limited.\n            var freeBytes = (ulong)Math.Max(0L, drive.TotalFreeSpace);
             var usedBytes = totalBytes > freeBytes ? totalBytes - freeBytes : 0UL;
             var percentage = usedBytes * 100d / totalBytes;
             var driveLabel = systemRoot.TrimEnd('\\');
