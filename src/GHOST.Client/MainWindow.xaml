@@ -193,22 +193,26 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="300" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center" Margin="26,18,12,18">
+                    <StackPanel VerticalAlignment="Center" Margin="26,11,12,11">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Background="#1B3A25" CornerRadius="4" Padding="7,4"
                                     BorderBrush="#396C48" BorderThickness="1" Margin="0,0,9,0">
-                                <TextBlock Text="SYSTEM READY" FontSize="8"
+                                <TextBlock Text="NEXT ACTION" FontSize="8"
                                            Foreground="{StaticResource NeonBrush}" />
                             </Border>
-                            <TextBlock Text="PRIVATE WORKSPACE  /  LOCAL INSTANCE" FontSize="8"
+                            <TextBlock Text="CASEWORK  /  LOCAL INSTANCE" FontSize="8"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Text="FOLLOW THE EVIDENCE. CONNECT THE FACTS."
-                                   FontSize="27" FontWeight="Bold" Margin="0,13,0,7"
-                                   Foreground="#F0FFF4" />
-                        <TextBlock Text="Manage cases, verify evidence, document analysis, and connect findings in one offline-first workspace."
-                                   FontSize="10" Foreground="#A9C1B0" TextWrapping="Wrap"
+                        <TextBlock x:Name="DashboardHeroTitle" Text="START YOUR FIRST INVESTIGATION"
+                                   FontSize="23" FontWeight="Bold" Margin="0,8,0,3"
+                                   Foreground="#F0FFF4" TextWrapping="Wrap" />
+                        <TextBlock x:Name="DashboardHeroDescription"
+                                   Text="Create a case to organize evidence, document analysis, and connect findings in one workspace."
+                                   FontSize="9" Foreground="#A9C1B0" TextWrapping="Wrap"
                                    MaxWidth="700" />
+                        <Button x:Name="DashboardHeroActionButton" Content="CREATE FIRST CASE"
+                                Click="DashboardHeroAction_Click" HorizontalAlignment="Left"
+                                Padding="12,6" FontSize="9" Margin="0,6,0,0" />
                     </StackPanel>
                     <Grid Grid.Column="1" ClipToBounds="True">
                         <Border Background="{StaticResource DotGridBrush}" Opacity="0.62" />
@@ -225,7 +229,7 @@
                         <TextBlock Text="G" FontSize="54" Foreground="{StaticResource NeonBrush}"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,56,2"
                                    Opacity="0.88" />
-                        <TextBlock Text="TRACE // VERIFY // CONNECT" FontSize="8"
+                        <TextBlock Text="CASES // EVIDENCE // ANALYSIS" FontSize="8"
                                    Foreground="#6E9A7B" HorizontalAlignment="Right"
                                    VerticalAlignment="Bottom" Margin="0,0,21,14" />
                     </Grid>
