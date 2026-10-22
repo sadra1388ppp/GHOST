@@ -185,8 +185,8 @@
             </Grid>
 
             <!-- LIVE SYSTEM MONITOR: real Windows telemetry -->
-            <Border Grid.Row="1" Background="#081722"
-                    BorderBrush="#23435B" BorderThickness="1" CornerRadius="10"
+            <Border Grid.Row="1" Background="#081711"
+                    BorderBrush="#244B35" BorderThickness="1" CornerRadius="10"
                     ClipToBounds="True" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -195,7 +195,7 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top"
-                            Background="#49DDF8" />
+                            Background="#63FFA0" />
 
                     <!-- Host and operating-system status -->
                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,8,12,8">
@@ -203,16 +203,16 @@
                             <Ellipse Width="6" Height="6" Fill="#63FFA0"
                                      Margin="0,0,7,0" />
                             <TextBlock Text="LIVE SYSTEM TELEMETRY" FontSize="8"
-                                       Foreground="#8FCFFF" />
+                                       Foreground="#9DFFC1" />
                         </StackPanel>
                         <TextBlock Text="SYSTEM MONITOR" FontSize="18"
                                    FontWeight="Bold" Margin="0,7,0,4"
                                    Foreground="#F1F7FC" />
                         <TextBlock x:Name="SystemHostText" Text="HOST / DETECTING DEVICE"
-                                   FontSize="8" Foreground="#B2C5D8"
+                                   FontSize="8" Foreground="#BDD9C6"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock x:Name="SystemUptimeText" Text="UPTIME / READING..."
-                                   FontSize="8" Foreground="#7FA3BE" Margin="0,5,0,0" />
+                                   FontSize="8" Foreground="#86B398" Margin="0,5,0,0" />
                     </StackPanel>
 
                     <!-- Live metrics -->
@@ -223,56 +223,89 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Background="#0D2232"
-                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                        <Border Grid.Column="0" Background="#0C1D14"
+                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
                                 Margin="0,0,7,0" Padding="10,7">
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="CPU LOAD" FontSize="8"
-                                           Foreground="#8FCFFF" />
+                                           Foreground="#9DFFC1" />
                                 <TextBlock x:Name="CpuUsageText" Text="--%"
                                            FontSize="23" FontWeight="SemiBold"
                                            Foreground="#63FFA0" Margin="0,2,0,3" />
-                                <ProgressBar x:Name="CpuUsageBar" Minimum="0" Maximum="100"
-                                             Value="0" Height="5" BorderThickness="0"
-                                             Background="#18364A" Foreground="#63FFA0" />
+                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
+                                    <Rectangle Height="1" Fill="#1C3B29"
+                                               VerticalAlignment="Center" Opacity="0.8" />
+                                    <Path x:Name="CpuUsageSparklineFill"
+                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
+                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
+                                    <Path x:Name="CpuUsageSparklineGlow"
+                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
+                                          Opacity="0.20" Data="M 0,17 L 100,17" />
+                                    <Path x:Name="CpuUsageSparkline"
+                                          Stretch="Fill" Stroke="#63FFA0" StrokeThickness="1.7"
+                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
+                                </Grid>
                                 <TextBlock x:Name="CpuUsageDetailText" Text="Sampling CPU activity..."
-                                           FontSize="7" Foreground="#9AB4C7"
+                                           FontSize="7" Foreground="#88AB94"
                                            Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="1" Background="#0D2232"
-                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                        <Border Grid.Column="1" Background="#0C1D14"
+                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
                                 Margin="0,0,7,0" Padding="10,7">
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="MEMORY / RAM" FontSize="8"
-                                           Foreground="#8FCFFF" />
+                                           Foreground="#9DFFC1" />
                                 <TextBlock x:Name="MemoryUsageText" Text="--%"
                                            FontSize="23" FontWeight="SemiBold"
-                                           Foreground="#49DDF8" Margin="0,2,0,3" />
-                                <ProgressBar x:Name="MemoryUsageBar" Minimum="0" Maximum="100"
-                                             Value="0" Height="5" BorderThickness="0"
-                                             Background="#18364A" Foreground="#49DDF8" />
+                                           Foreground="#63FFA0" Margin="0,2,0,3" />
+                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
+                                    <Rectangle Height="1" Fill="#1C3B29"
+                                               VerticalAlignment="Center" Opacity="0.8" />
+                                    <Path x:Name="MemoryUsageSparklineFill"
+                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
+                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
+                                    <Path x:Name="MemoryUsageSparklineGlow"
+                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
+                                          Opacity="0.20" Data="M 0,17 L 100,17" />
+                                    <Path x:Name="MemoryUsageSparkline"
+                                          Stretch="Fill" Stroke="#63FFA0" StrokeThickness="1.7"
+                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
+                                </Grid>
                                 <TextBlock x:Name="MemoryUsageDetailText" Text="Reading physical memory..."
-                                           FontSize="7" Foreground="#9AB4C7"
+                                           FontSize="7" Foreground="#88AB94"
                                            Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="2" Background="#0D2232"
-                                BorderBrush="#1E4056" BorderThickness="1" CornerRadius="6"
+                        <Border Grid.Column="2" Background="#0C1D14"
+                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
                                 Padding="10,7">
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="SYSTEM DRIVE" FontSize="8"
-                                           Foreground="#8FCFFF" />
+                                           Foreground="#9DFFC1" />
                                 <TextBlock x:Name="DiskUsageText" Text="--%"
                                            FontSize="23" FontWeight="SemiBold"
-                                           Foreground="#D8E98A" Margin="0,2,0,3" />
-                                <ProgressBar x:Name="DiskUsageBar" Minimum="0" Maximum="100"
-                                             Value="0" Height="5" BorderThickness="0"
-                                             Background="#18364A" Foreground="#D8E98A" />
+                                           Foreground="#63FFA0" Margin="0,2,0,3" />
+                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
+                                    <Rectangle Height="1" Fill="#1C3B29"
+                                               VerticalAlignment="Center" Opacity="0.8" />
+                                    <Path x:Name="DiskUsageSparklineFill"
+                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
+                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
+                                    <Path x:Name="DiskUsageSparklineGlow"
+                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
+                                          Opacity="0.20" Data="M 0,17 L 100,17" />
+                                    <Path x:Name="DiskUsageSparkline"
+                                          Stretch="Fill" Stroke="#63FFA0" StrokeThickness="1.7"
+                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
+                                </Grid>
                                 <TextBlock x:Name="DiskUsageDetailText" Text="Reading system drive..."
-                                           FontSize="7" Foreground="#9AB4C7"
+                                           FontSize="7" Foreground="#88AB94"
                                            Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Border>
