@@ -817,6 +817,8 @@ public partial class MainWindow : Window
         }
     }
 
+    private void EvidenceVault_Click(object sender, RoutedEventArgs e) => ComingSoon_Click(sender, e);
+
     private void Terminal_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(
