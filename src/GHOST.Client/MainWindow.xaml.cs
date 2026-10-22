@@ -267,7 +267,6 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             ToolTip = "Search by case number, title, or status"
         };
-        search.TextChanged += (_, _) => RefreshRows();
         DockPanel.SetDock(search, Dock.Top);
         panel.Children.Add(search);
 
@@ -280,7 +279,9 @@ public partial class MainWindow : Window
             DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
         };
 
-
+        // Wire the search event only after both controls exist, because RefreshRows
+        // reads from both search and list.
+        search.TextChanged += (_, _) => RefreshRows();
 
         var footer = new StackPanel
         {
