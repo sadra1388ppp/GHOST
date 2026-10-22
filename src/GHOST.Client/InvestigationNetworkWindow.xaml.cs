@@ -62,12 +62,11 @@ public partial class InvestigationNetworkWindow : Window
             ];
 
             var nodeLookup = _nodes.ToDictionary(x => x.Key, x => x);
-            _connections = db.Relationships.AsNoTracking()
+            var savedRelationships = db.Relationships.AsNoTracking()
                 .OrderByDescending(x => x.CreatedAt)
-                .Select(x => new RelationshipRecord(
-                    x.Id, x.SourceType, x.SourceId, x.TargetType, x.TargetId,
-                    x.RelationshipType, x.Description, x.Confidence, x.CreatedAt))
-                .ToList()
+                .ToList();
+
+            _connections = savedRelationships
                 .Select(x => new NetworkConnectionView(
                     x.Id,
                     x.RelationshipType,
@@ -505,13 +504,13 @@ public partial class InvestigationNetworkWindow : Window
         };
     }
 
-    private static void AddFieldLabel(Panel panel, string text)
+    private void AddFieldLabel(Panel panel, string text)
     {
         panel.Children.Add(new TextBlock
         {
             Text = text,
             FontSize = 9,
-            Foreground = (Brush)Application.Current.MainWindow!.FindResource("MutedBrush"),
+            Foreground = (Brush)FindResource("MutedBrush"),
             Margin = new Thickness(0, 0, 0, 2)
         });
     }
@@ -584,16 +583,6 @@ public partial class InvestigationNetworkWindow : Window
         }
     }
 
-    private sealed record RelationshipRecord(
-        int Id,
-        string SourceType,
-        int SourceId,
-        string TargetType,
-        int TargetId,
-        string RelationshipType,
-        string Description,
-        double Confidence,
-        DateTime CreatedAt);
 }
 
 public sealed record NetworkNodeView(string Type, int Id, string Title, string Subtitle)
