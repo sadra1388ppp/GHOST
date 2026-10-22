@@ -280,6 +280,8 @@ public partial class MainWindow : Window
             DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
         };
 
+
+
         var footer = new StackPanel
         {
             Orientation = Orientation.Horizontal,
