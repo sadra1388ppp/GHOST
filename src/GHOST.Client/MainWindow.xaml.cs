@@ -536,7 +536,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("ghost labs              Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost audit [count]     Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost network           Graph node and relationship totals", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost vault             Check evidence file presence + hashes", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost vault             Check evidence file presence + SHA-256 metadata", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost db                SQLite integrity + database size", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost open <id|number>  Open a case inside GHOST", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("These GHOST commands read local records; 'open' only changes the current app view.",
