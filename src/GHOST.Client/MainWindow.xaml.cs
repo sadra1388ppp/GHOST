@@ -1089,13 +1089,16 @@ public partial class MainWindow : Window
         foreach (var node in visibleNodes)
         {
             var center = positions[node.Key];
+            var isSelectedNode = _selectedNetworkNode?.Key == node.Key;
             var card = new Border
             {
                 Width = NodeWidth,
                 Height = NodeHeight,
                 Background = GetNodeBackground(node.Type),
-                BorderBrush = GetNodeAccent(node.Type),
-                BorderThickness = new Thickness(1),
+                BorderBrush = isSelectedNode
+                    ? (Brush)FindResource("NeonBrush")
+                    : GetNodeAccent(node.Type),
+                BorderThickness = new Thickness(isSelectedNode ? 2.2 : 1),
                 CornerRadius = new CornerRadius(7),
                 Padding = new Thickness(11, 8, 11, 8),
                 Cursor = Cursors.Hand,
@@ -1111,6 +1114,7 @@ public partial class MainWindow : Window
                 SelectedNodeTitle.Text = node.Title;
                 SelectedNodeDetails.Text = $"{node.Type.ToUpperInvariant()}  /  RECORD ID {node.Id}\n{node.Subtitle}\nCONNECTIONS // {degree}\n\nClick OPEN SELECTED RECORD to work on this item.";
                 OpenSelectedNodeButton.IsEnabled = true;
+                DrawGraph();
             };
 
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
