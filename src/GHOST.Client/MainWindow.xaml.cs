@@ -817,6 +817,447 @@ public partial class MainWindow : Window
         }
     }
 
+    private void DigitalLab_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = "GHOST // Digital Lab",
+            Width = 1040,
+            Height = 700,
+            MinWidth = 820,
+            MinHeight = 540,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            Background = (Brush)FindResource("BgBrush"),
+            Foreground = Brushes.White,
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            ResizeMode = ResizeMode.CanResize
+        };
+
+        var root = new DockPanel { Margin = new Thickness(20) };
+        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        header.Children.Add(new TextBlock
+        {
+            Text = "DIGITAL LAB // EXPERIMENTS & OBSERVATIONS",
+            FontSize = 19,
+            Foreground = (Brush)FindResource("NeonBrush")
+        });
+        header.Children.Add(new TextBlock
+        {
+            Text = "Save a procedure, results, and observations against a case. All records stay local.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var casePicker = new ComboBox
+        {
+            Height = 34,
+            DisplayMemberPath = nameof(LabCaseOption.DisplayText),
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Select the case for this lab"
+        };
+        DockPanel.SetDock(casePicker, Dock.Top);
+        root.Children.Add(casePicker);
+
+        var form = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+        form.Children.Add(new TextBlock
+        {
+            Text = "NEW EXPERIMENT",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 0, 0, 7)
+        });
+        var titleBox = new TextBox
+        {
+            Height = 34,
+            ToolTip = "Experiment title",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        var categoryBox = new ComboBox
+        {
+            Height = 34,
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        categoryBox.Items.Add("File Analysis");
+        categoryBox.Items.Add("Log Analysis");
+        categoryBox.Items.Add("Network Analysis");
+        categoryBox.Items.Add("Scientific");
+        categoryBox.Items.Add("Other");
+        categoryBox.SelectedIndex = 0;
+
+        var hypothesisBox = new TextBox
+        {
+            Height = 45,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            ToolTip = "Objective or hypothesis",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        var procedureBox = new TextBox
+        {
+            Height = 52,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            ToolTip = "Procedure or method",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        var createButton = new Button
+        {
+            Content = "+ SAVE EXPERIMENT",
+            Width = 190,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0)
+        };
+        form.Children.Add(titleBox);
+        form.Children.Add(categoryBox);
+        form.Children.Add(hypothesisBox);
+        form.Children.Add(procedureBox);
+        form.Children.Add(createButton);
+        DockPanel.SetDock(form, Dock.Top);
+        root.Children.Add(form);
+
+        var observationPanel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
+        observationPanel.Children.Add(new TextBlock
+        {
+            Text = "OBSERVATION FOR SELECTED EXPERIMENT",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("CyanBrush"),
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+        var resultBox = new TextBox
+        {
+            Height = 38,
+            ToolTip = "Experiment result / conclusion",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        observationPanel.Children.Add(resultBox);
+
+        var observationBox = new TextBox
+        {
+            Height = 48,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            ToolTip = "Observation details",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        observationPanel.Children.Add(observationBox);
+
+        var actionRow = new WrapPanel();
+        var numericBox = new TextBox
+        {
+            Width = 120,
+            Height = 34,
+            ToolTip = "Optional numeric measurement",
+            Margin = new Thickness(0, 0, 7, 7)
+        };
+        var unitBox = new TextBox
+        {
+            Width = 120,
+            Height = 34,
+            ToolTip = "Optional measurement unit",
+            Margin = new Thickness(0, 0, 7, 7)
+        };
+        var saveResultButton = new Button
+        {
+            Content = "SAVE RESULT",
+            MinWidth = 120,
+            Margin = new Thickness(0, 0, 7, 7)
+        };
+        var addObservationButton = new Button
+        {
+            Content = "ADD OBSERVATION",
+            MinWidth = 160,
+            Margin = new Thickness(0, 0, 7, 7)
+        };
+        actionRow.Children.Add(numericBox);
+        actionRow.Children.Add(unitBox);
+        actionRow.Children.Add(saveResultButton);
+        actionRow.Children.Add(addObservationButton);
+        observationPanel.Children.Add(actionRow);
+        DockPanel.SetDock(observationPanel, Dock.Bottom);
+        root.Children.Add(observationPanel);
+
+        var status = new TextBlock
+        {
+            Text = "Create or select an experiment to begin.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        DockPanel.SetDock(status, Dock.Bottom);
+        root.Children.Add(status);
+
+        var experimentList = new ListView
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            Foreground = Brushes.White,
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            DisplayMemberPath = nameof(ExperimentArchiveRow.DisplayText)
+        };
+        root.Children.Add(experimentList);
+
+        void RefreshExperiments()
+        {
+            try
+            {
+                using var db = new GhostDbContext();
+                var selectedCaseId = (casePicker.SelectedItem as LabCaseOption)?.Id;
+                var previousExperimentId = (experimentList.SelectedItem as ExperimentArchiveRow)?.Id;
+                var rows = selectedCaseId.HasValue
+                    ? db.Experiments.AsNoTracking()
+                        .Where(x => x.CaseFileId == selectedCaseId.Value)
+                        .OrderByDescending(x => x.CreatedAt)
+                        .ToList()
+                        .Select(x => new ExperimentArchiveRow(
+                            x.Id, x.CaseFileId, x.Title, x.Category, x.Status,
+                            x.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"), x.Results))
+                        .ToList()
+                    : new List<ExperimentArchiveRow>();
+
+                experimentList.ItemsSource = rows;
+                experimentList.SelectedItem = previousExperimentId.HasValue
+                    ? rows.FirstOrDefault(x => x.Id == previousExperimentId.Value)
+                    : rows.FirstOrDefault();
+
+                status.Text = rows.Count == 0
+                    ? "No experiments in this case yet. Use the form above to create one."
+                    : $"Loaded {rows.Count} experiment(s). Select a row to save a result or add an observation.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Experiments could not be loaded: {ex.Message}";
+            }
+        }
+
+        using (var db = new GhostDbContext())
+        {
+            casePicker.ItemsSource = db.Cases.AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList()
+                .Select(x => new LabCaseOption(x.Id, x.CaseNumber, x.Title))
+                .ToList();
+            casePicker.SelectedIndex = casePicker.Items.Count > 0 ? 0 : -1;
+        }
+
+        casePicker.SelectionChanged += (_, _) =>
+        {
+            if (dialog.IsLoaded)
+                RefreshExperiments();
+        };
+        experimentList.SelectionChanged += (_, _) =>
+        {
+            if (experimentList.SelectedItem is ExperimentArchiveRow selected)
+                resultBox.Text = selected.Results;
+        };
+
+        createButton.Click += (_, _) =>
+        {
+            if (casePicker.SelectedItem is not LabCaseOption selectedCase)
+            {
+                status.Text = "Create a case first, then select it here.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(titleBox.Text))
+            {
+                status.Text = "Enter an experiment title.";
+                titleBox.Focus();
+                return;
+            }
+
+            try
+            {
+                using var db = new GhostDbContext();
+                using var transaction = db.Database.BeginTransaction();
+                var now = DateTime.UtcNow;
+                var experiment = new Experiment
+                {
+                    CaseFileId = selectedCase.Id,
+                    Title = titleBox.Text.Trim(),
+                    Category = categoryBox.SelectedItem?.ToString() ?? "Other",
+                    Hypothesis = hypothesisBox.Text.Trim(),
+                    Procedure = procedureBox.Text.Trim(),
+                    Status = "Draft",
+                    CreatedAt = now
+                };
+                db.Experiments.Add(experiment);
+                db.SaveChanges();
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Experiment",
+                    EntityId = experiment.Id,
+                    Action = "Created",
+                    Details = $"Experiment created: {experiment.Title} ({experiment.Category})."
+                });
+                db.TimelineEvents.Add(new TimelineEvent
+                {
+                    CaseFileId = selectedCase.Id,
+                    Title = "Experiment created: " + experiment.Title,
+                    Details = $"Category: {experiment.Category}; status: {experiment.Status}.",
+                    OccurredAt = now
+                });
+                db.SaveChanges();
+                transaction.Commit();
+
+                titleBox.Clear();
+                hypothesisBox.Clear();
+                procedureBox.Clear();
+                RefreshExperiments();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = "Experiment saved. Select it below to add a result or observation.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Experiment could not be saved: {ex.Message}";
+            }
+        };
+
+        saveResultButton.Click += (_, _) =>
+        {
+            if (experimentList.SelectedItem is not ExperimentArchiveRow selected)
+            {
+                status.Text = "Select an experiment first.";
+                return;
+            }
+
+            try
+            {
+                using var db = new GhostDbContext();
+                using var transaction = db.Database.BeginTransaction();
+                var experiment = db.Experiments.FirstOrDefault(x => x.Id == selected.Id);
+                if (experiment is null)
+                {
+                    RefreshExperiments();
+                    return;
+                }
+
+                experiment.Results = resultBox.Text.Trim();
+                experiment.Status = string.IsNullOrWhiteSpace(experiment.Results) ? "Draft" : "Completed";
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Experiment",
+                    EntityId = experiment.Id,
+                    Action = "Result Updated",
+                    Details = $"Result updated for experiment {experiment.Title}."
+                });
+                db.TimelineEvents.Add(new TimelineEvent
+                {
+                    CaseFileId = experiment.CaseFileId,
+                    Title = "Experiment result updated: " + experiment.Title,
+                    Details = string.IsNullOrWhiteSpace(experiment.Results) ? "Result cleared." : experiment.Results,
+                    OccurredAt = DateTime.UtcNow
+                });
+                db.SaveChanges();
+                transaction.Commit();
+
+                RefreshExperiments();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = "Result saved; timeline and audit history updated.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Experiment result could not be saved: {ex.Message}";
+            }
+        };
+
+        addObservationButton.Click += (_, _) =>
+        {
+            if (experimentList.SelectedItem is not ExperimentArchiveRow selected)
+            {
+                status.Text = "Select an experiment before adding an observation.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(observationBox.Text))
+            {
+                status.Text = "Enter an observation description.";
+                observationBox.Focus();
+                return;
+            }
+
+            double? numericValue = null;
+            if (!string.IsNullOrWhiteSpace(numericBox.Text))
+            {
+                if (!double.TryParse(numericBox.Text.Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var parsed))
+                {
+                    status.Text = "Enter a valid numeric value, for example 12.5.";
+                    numericBox.Focus();
+                    return;
+                }
+                numericValue = parsed;
+            }
+
+            try
+            {
+                using var db = new GhostDbContext();
+                using var transaction = db.Database.BeginTransaction();
+                var experiment = db.Experiments.FirstOrDefault(x => x.Id == selected.Id);
+                if (experiment is null)
+                {
+                    RefreshExperiments();
+                    return;
+                }
+
+                var now = DateTime.UtcNow;
+                var observation = new Observation
+                {
+                    ExperimentId = experiment.Id,
+                    Description = observationBox.Text.Trim(),
+                    NumericValue = numericValue,
+                    Unit = unitBox.Text.Trim(),
+                    RecordedAt = now
+                };
+                db.Observations.Add(observation);
+                db.SaveChanges();
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "Observation",
+                    EntityId = observation.Id,
+                    Action = "Created",
+                    Details = $"Observation recorded for experiment {experiment.Title}."
+                });
+                db.TimelineEvents.Add(new TimelineEvent
+                {
+                    CaseFileId = experiment.CaseFileId,
+                    Title = "Observation recorded: " + experiment.Title,
+                    Details = observation.Description + (numericValue.HasValue
+                        ? $" | Value: {numericValue.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)} {observation.Unit}"
+                        : string.Empty),
+                    OccurredAt = now
+                });
+                db.SaveChanges();
+                transaction.Commit();
+
+                observationBox.Clear();
+                numericBox.Clear();
+                unitBox.Clear();
+                RefreshExperiments();
+                RefreshStats();
+                RefreshNetwork();
+                status.Text = "Observation saved; timeline and audit history updated.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Observation could not be saved: {ex.Message}";
+            }
+        };
+
+        dialog.Content = root;
+        RefreshExperiments();
+        dialog.ShowDialog();
+    }
+
     private void EvidenceVault_Click(object sender, RoutedEventArgs e) => ComingSoon_Click(sender, e);
 
     private void Terminal_Click(object sender, RoutedEventArgs e)
@@ -837,6 +1278,24 @@ public partial class MainWindow : Window
             "GHOST",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
+    }
+
+    private sealed record LabCaseOption(int Id, string CaseNumber, string Title)
+    {
+        public string DisplayText => $"{CaseNumber} / {Title}";
+    }
+
+    private sealed record ExperimentArchiveRow(
+        int Id,
+        int CaseFileId,
+        string Title,
+        string Category,
+        string Status,
+        string CreatedAt,
+        string Results)
+    {
+        public string DisplayText =>
+            $"{Status.ToUpperInvariant(),-10} | {Category,-16} | {Title} | {CreatedAt}";
     }
 
     private sealed record RecentCaseSummary(
