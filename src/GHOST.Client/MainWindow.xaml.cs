@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SetActiveNavigation("Dashboard");
 
         // Fit the initial window to the usable desktop area, including common laptop screens.
         var workArea = SystemParameters.WorkArea;
@@ -538,15 +539,16 @@ public partial class MainWindow : Window
         var evidenceIds = evidence.Select(x => x.Id).ToHashSet();
         var experimentIdsSet = experiments.Select(x => x.Id).ToHashSet();
         var observationIds = observations.Select(x => x.Id).ToHashSet();
+        var timelineIds = timeline.Select(x => x.Id).ToHashSet();
 
         string RelatedLabel(string type, int id)
         {
             return type switch
             {
                 "Case" when id == caseFile.Id => $"{caseFile.CaseNumber} / {caseFile.Title}",
-                "Evidence" when evidence.FirstOrDefault(x => x.Id == id) is EvidenceItem e => e.Title,
-                "Experiment" when experiments.FirstOrDefault(x => x.Id == id) is Experiment e => e.Title,
-                "Observation" when observations.FirstOrDefault(x => x.Id == id) is Observation o => o.Description,
+                "Evidence" when evidence.FirstOrDefault(x => x.Id == id) is EvidenceItem evidenceItem => evidenceItem.Title,
+                "Experiment" when experiments.FirstOrDefault(x => x.Id == id) is Experiment experimentItem => experimentItem.Title,
+                "Observation" when observations.FirstOrDefault(x => x.Id == id) is Observation observationItem => observationItem.Description,
                 _ => $"{type.ToUpperInvariant()} #{id}"
             };
         }
@@ -580,7 +582,8 @@ public partial class MainWindow : Window
                 (x.EntityType == "Case" && x.EntityId == caseId) ||
                 (x.EntityType == "Evidence" && evidenceIds.Contains(x.EntityId)) ||
                 (x.EntityType == "Experiment" && experimentIdsSet.Contains(x.EntityId)) ||
-                (x.EntityType == "Observation" && observationIds.Contains(x.EntityId)))
+                (x.EntityType == "Observation" && observationIds.Contains(x.EntityId)) ||
+                (x.EntityType == "FieldEntry" && timelineIds.Contains(x.EntityId)))
             .Take(120)
             .Select(x => $"{x.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}  |  {x.EntityType.ToUpperInvariant()}  |  {x.Action}\n{x.Details}")
             .ToList();
@@ -655,12 +658,21 @@ public partial class MainWindow : Window
         actions.Children.Add(openEvidence);
         actions.Children.Add(openNetwork);
         summary.Children.Add(actions);
+        var caseStatusMessage = new TextBlock
+        {
+            Text = "Changes are saved locally and appear in the audit history.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        summary.Children.Add(caseStatusMessage);
 
         saveButton.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(titleBox.Text))
             {
-                status.Text = "A case title is required.";
+                caseStatusMessage.Text = "A case title is required.";
                 return;
             }
             try
@@ -669,7 +681,7 @@ public partial class MainWindow : Window
                 var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
                 if (stored is null)
                 {
-                    status.Text = "This case could not be found. Refresh the archive.";
+                    caseStatusMessage.Text = "This case could not be found. Refresh the archive.";
                     return;
                 }
                 var oldTitle = stored.Title;
@@ -686,11 +698,11 @@ public partial class MainWindow : Window
                 db.SaveChanges();
                 RefreshStats();
                 RefreshNetwork();
-                status.Text = "Case details saved and added to the audit history.";
+                caseStatusMessage.Text = "Case details saved and added to the audit history.";
             }
             catch (Exception ex)
             {
-                status.Text = $"Case details could not be saved: {ex.Message}";
+                caseStatusMessage.Text = $"Case details could not be saved: {ex.Message}";
             }
         };
 
@@ -717,7 +729,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                status.Text = $"Case status could not be changed: {ex.Message}";
+                caseStatusMessage.Text = $"Case status could not be changed: {ex.Message}";
             }
         };
 
@@ -726,8 +738,8 @@ public partial class MainWindow : Window
         openEvidence.Click += (_, _) => EvidenceVault_Click(this, new RoutedEventArgs());
         openNetwork.Click += (_, _) =>
         {
-            _selectedNetworkNode = _nodes.FirstOrDefault(x => x.Type == "Case" && x.Id == caseId);
             Network_Click(this, new RoutedEventArgs());
+            _selectedNetworkNode = _nodes.FirstOrDefault(x => x.Type == "Case" && x.Id == caseId);
             if (_selectedNetworkNode is not null)
             {
                 SelectedNodeTitle.Text = _selectedNetworkNode.Title;
