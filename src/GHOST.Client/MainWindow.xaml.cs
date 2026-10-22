@@ -564,7 +564,7 @@ public partial class MainWindow : Window
     {
         AddDashboardConsoleLine("GHOST // ALL BUILT-IN APPLICATION COMMANDS", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("INVESTIGATION", Color.FromRgb(136, 171, 148), true);
-        AddDashboardConsoleLine("ghost help                 Show all built-in commands", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost help                 Show all commands (aliases: 'ghost' and 'ghost ?')", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost status               App + live system snapshot", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost cases                List recent case files", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost evidence             Evidence and archive totals", Color.FromRgb(191, 255, 208));
