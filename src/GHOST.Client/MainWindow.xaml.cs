@@ -452,6 +452,9 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine($"{DashboardConsolePromptText.Text} {command}",
             Color.FromRgb(99, 255, 160), true);
 
+        if (TryExecuteGhostApplicationCommand(command))
+            return;
+
         var process = _dashboardPowerShellProcess;
         if (process is null || process.HasExited)
         {
@@ -470,6 +473,353 @@ public partial class MainWindow : Window
             AddDashboardConsoleLine($"Could not send input to PowerShell: {ex.Message}",
                 Color.FromRgb(255, 142, 142), true);
         }
+    }
+
+    private bool TryExecuteGhostApplicationCommand(string input)
+    {
+        var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0 ||
+            !string.Equals(parts[0], "ghost", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var command = parts.Length > 1 ? parts[1].ToLowerInvariant() : "help";
+        switch (command)
+        {
+            case "help":
+            case "?":
+                ExecuteGhostHelp();
+                break;
+            case "status":
+                RunGhostReadCommand("status", ExecuteGhostStatus);
+                break;
+            case "cases":
+                RunGhostReadCommand("cases", ExecuteGhostCases);
+                break;
+            case "evidence":
+                RunGhostReadCommand("evidence", ExecuteGhostEvidence);
+                break;
+            case "labs":
+                RunGhostReadCommand("labs", ExecuteGhostLabs);
+                break;
+            case "audit":
+                RunGhostReadCommand("audit", () => ExecuteGhostAudit(parts));
+                break;
+            case "network":
+                RunGhostReadCommand("network", ExecuteGhostNetwork);
+                break;
+            case "vault":
+                RunGhostReadCommand("vault", ExecuteGhostVault);
+                break;
+            case "db":
+                RunGhostReadCommand("db", ExecuteGhostDatabase);
+                break;
+            case "open":
+                RunGhostReadCommand("open", () => ExecuteGhostOpen(parts));
+                break;
+            default:
+                AddDashboardConsoleLine(
+                    $"Unknown GHOST command: '{command}'. Type 'ghost help' to list the 10 built-in commands.",
+                    Color.FromRgb(255, 177, 107), true);
+                break;
+        }
+
+        return true;
+    }
+
+    private void ExecuteGhostHelp()
+    {
+        AddDashboardConsoleLine("GHOST // BUILT-IN APPLICATION COMMANDS", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine("ghost help              Show these commands", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost status            App + live system snapshot", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost cases             List recent case files", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost evidence          Evidence and archive totals", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost labs              Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost audit [count]     Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost network           Graph node and relationship totals", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost vault             Check evidence file presence + hashes", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost db                SQLite integrity + database size", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost open <id|number>  Open a case inside GHOST", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("These GHOST commands read local records; 'open' only changes the current app view.",
+            Color.FromRgb(136, 171, 148));
+    }
+
+    private void RunGhostReadCommand(string commandName, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            AddDashboardConsoleLine(
+                $"GHOST {commandName.ToUpperInvariant()} ERROR  //  {ex.Message}",
+                Color.FromRgb(255, 142, 142), true);
+        }
+    }
+
+    private void ExecuteGhostStatus()
+    {
+        using var db = new GhostDbContext();
+        AddDashboardConsoleLine("GHOST CORE // STATUS SNAPSHOT", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"HOST          {Environment.MachineName}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"POWERSHELL    {(_dashboardPowerShellProcess is { HasExited: false } ? "CONNECTED" : "STOPPED")}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"CPU           {CpuUsageText.Text}  /  {CpuUsageDetailText.Text}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"RAM           {MemoryUsageText.Text}  /  {MemoryUsageDetailText.Text}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"SYSTEM DRIVE  {DiskUsageText.Text}  /  {DiskUsageDetailText.Text}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"UPTIME        {FormatUptime(Environment.TickCount64)}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"CASES         {db.Cases.Count()}  |  OPEN {db.Cases.Count(x => x.Status == "Open")}",
+            Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"ACTIVE VAULT  {db.Evidence.Count(x => !x.IsArchived)} RECORDS",
+            Color.FromRgb(191, 255, 208));
+    }
+
+    private void ExecuteGhostCases()
+    {
+        using var db = new GhostDbContext();
+        var cases = db.Cases.AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(10)
+            .ToList();
+
+        AddDashboardConsoleLine(
+            $"CASE ARCHIVE // TOTAL {db.Cases.Count()} // OPEN {db.Cases.Count(x => x.Status == "Open")} // CLOSED {db.Cases.Count(x => x.Status == "Closed")}",
+            Color.FromRgb(99, 255, 160), true);
+
+        if (cases.Count == 0)
+        {
+            AddDashboardConsoleLine("No cases found. Use the Create Investigation action to start one.",
+                Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        foreach (var item in cases)
+        {
+            var statusColor = string.Equals(item.Status, "Open", StringComparison.OrdinalIgnoreCase)
+                ? Color.FromRgb(99, 255, 160)
+                : Color.FromRgb(136, 171, 148);
+            AddDashboardConsoleLine(
+                $"[{item.Status.ToUpperInvariant(),-6}] ID {item.Id,-4} {item.CaseNumber}  |  {item.Title}",
+                statusColor);
+        }
+
+        AddDashboardConsoleLine("Use: ghost open <ID or case number>", Color.FromRgb(136, 171, 148));
+    }
+
+    private void ExecuteGhostEvidence()
+    {
+        using var db = new GhostDbContext();
+        var all = db.Evidence.AsNoTracking().ToList();
+        var active = all.Count(x => !x.IsArchived);
+        var archived = all.Count(x => x.IsArchived);
+        var noHash = all.Count(x => string.IsNullOrWhiteSpace(x.Sha256));
+
+        AddDashboardConsoleLine("EVIDENCE VAULT // INVENTORY", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"TOTAL RECORDS       {all.Count}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"ACTIVE              {active}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"ARCHIVED            {archived}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"WITHOUT SHA-256     {noHash}", noHash == 0
+            ? Color.FromRgb(99, 255, 160)
+            : Color.FromRgb(245, 196, 106));
+    }
+
+    private void ExecuteGhostLabs()
+    {
+        using var db = new GhostDbContext();
+        var experiments = db.Experiments.AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt).Take(5).ToList();
+
+        AddDashboardConsoleLine("LABS // RESEARCH INVENTORY", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"EXPERIMENTS    {db.Experiments.Count()}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"OBSERVATIONS   {db.Observations.Count()}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"TIMELINE EVENTS {db.TimelineEvents.Count()}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"RELATIONSHIPS  {db.Relationships.Count()}", Color.FromRgb(191, 255, 208));
+
+        foreach (var item in experiments)
+        {
+            var title = item.Title.Length > 58 ? item.Title[..55] + "..." : item.Title;
+            AddDashboardConsoleLine($"#{item.Id,-4} [{item.Status.ToUpperInvariant(),-10}] {title}",
+                Color.FromRgb(136, 171, 148));
+        }
+    }
+
+    private void ExecuteGhostAudit(string[] parts)
+    {
+        var count = 8;
+        if (parts.Length > 2 &&
+            (!int.TryParse(parts[2], out count) || count is < 1 or > 25))
+        {
+            AddDashboardConsoleLine("Usage: ghost audit [count]  //  count must be 1–25",
+                Color.FromRgb(245, 196, 106));
+            return;
+        }
+
+        using var db = new GhostDbContext();
+        var entries = db.AuditLogs.AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(count)
+            .ToList();
+
+        AddDashboardConsoleLine($"AUDIT LOG // SHOWING {entries.Count} OF {db.AuditLogs.Count()} EVENTS",
+            Color.FromRgb(99, 255, 160), true);
+
+        if (entries.Count == 0)
+        {
+            AddDashboardConsoleLine("No audit events are recorded yet.", Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        foreach (var entry in entries)
+        {
+            AddDashboardConsoleLine(
+                $"{entry.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}  {entry.EntityType}#{entry.EntityId}  {entry.Action}",
+                Color.FromRgb(191, 255, 208), true);
+            var details = string.IsNullOrWhiteSpace(entry.Details) ? "(no details)" : entry.Details;
+            if (details.Length > 110)
+                details = details[..107] + "...";
+            AddDashboardConsoleLine($"  {details}", Color.FromRgb(136, 171, 148));
+        }
+    }
+
+    private void ExecuteGhostNetwork()
+    {
+        using var db = new GhostDbContext();
+        var cases = db.Cases.Count();
+        var evidence = db.Evidence.Count(x => !x.IsArchived);
+        var experiments = db.Experiments.Count();
+        var observations = db.Observations.Count();
+        var relationships = db.Relationships.Count();
+        var nodes = cases + evidence + experiments + observations;
+
+        AddDashboardConsoleLine("INVESTIGATION NETWORK // INDEX SNAPSHOT", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"NODES         {nodes}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"  CASES       {cases}", Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine($"  EVIDENCE    {evidence} (active)", Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine($"  EXPERIMENTS {experiments}", Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine($"  OBSERVATIONS {observations}", Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine($"RELATIONSHIPS {relationships}", Color.FromRgb(191, 255, 208));
+    }
+
+    private void ExecuteGhostVault()
+    {
+        using var db = new GhostDbContext();
+        var items = db.Evidence.AsNoTracking().ToList();
+        var missingFiles = new List<string>();
+        var missingHashes = 0;
+
+        foreach (var item in items)
+        {
+            if (string.IsNullOrWhiteSpace(item.Sha256))
+                missingHashes++;
+
+            try
+            {
+                var path = GetEvidenceFilePath(item.RelativePath);
+                if (!File.Exists(path))
+                    missingFiles.Add(item.Title);
+            }
+            catch (Exception)
+            {
+                missingFiles.Add(item.Title + " [INVALID PATH]");
+            }
+        }
+
+        AddDashboardConsoleLine("VAULT HEALTH // FILE PRESENCE CHECK", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"RECORDS          {items.Count}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"MISSING COPIES   {missingFiles.Count}", missingFiles.Count == 0
+            ? Color.FromRgb(99, 255, 160)
+            : Color.FromRgb(255, 142, 142));
+        AddDashboardConsoleLine($"MISSING HASHES   {missingHashes}", missingHashes == 0
+            ? Color.FromRgb(99, 255, 160)
+            : Color.FromRgb(245, 196, 106));
+
+        foreach (var missing in missingFiles.Take(5))
+            AddDashboardConsoleLine($"  MISSING: {missing}", Color.FromRgb(255, 142, 142));
+
+        AddDashboardConsoleLine("Presence-only check; files are not re-hashed or modified.",
+            Color.FromRgb(136, 171, 148));
+    }
+
+    private void ExecuteGhostDatabase()
+    {
+        var databasePath = IOPath.Combine(GetGhostDataDirectory(), "GHOST.db");
+        AddDashboardConsoleLine("DATABASE // SQLITE INTEGRITY", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"PATH  {databasePath}", Color.FromRgb(136, 171, 148));
+
+        if (!File.Exists(databasePath))
+        {
+            AddDashboardConsoleLine("Database file not found at the expected path.", Color.FromRgb(255, 142, 142));
+            return;
+        }
+
+        var fileInfo = new FileInfo(databasePath);
+        AddDashboardConsoleLine($"SIZE  {fileInfo.Length / (1024d * 1024d):0.00} MiB",
+            Color.FromRgb(191, 255, 208));
+
+        using var db = new GhostDbContext();
+        db.Database.OpenConnection();
+        using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "PRAGMA integrity_check;";
+        using var reader = command.ExecuteReader();
+        var results = new List<string>();
+        while (reader.Read())
+            results.Add(reader.GetString(0));
+
+        var healthy = results.Count > 0 &&
+                      results.All(x => string.Equals(x, "ok", StringComparison.OrdinalIgnoreCase));
+        AddDashboardConsoleLine(
+            $"INTEGRITY  {(healthy ? "OK" : "CHECK REQUIRED")}",
+            healthy ? Color.FromRgb(99, 255, 160) : Color.FromRgb(255, 142, 142),
+            true);
+
+        foreach (var result in results.Take(5))
+            AddDashboardConsoleLine($"  {result}", healthy
+                ? Color.FromRgb(136, 171, 148)
+                : Color.FromRgb(255, 142, 142));
+    }
+
+    private void ExecuteGhostOpen(string[] parts)
+    {
+        if (parts.Length < 3)
+        {
+            AddDashboardConsoleLine("Usage: ghost open <ID or case number>", Color.FromRgb(245, 196, 106));
+            return;
+        }
+
+        var selector = string.Join(' ', parts.Skip(2)).Trim().Trim('"');
+        int? caseId = null;
+
+        using (var db = new GhostDbContext())
+        {
+            if (int.TryParse(selector, out var parsedId))
+            {
+                caseId = db.Cases.AsNoTracking()
+                    .Where(x => x.Id == parsedId)
+                    .Select(x => (int?)x.Id)
+                    .FirstOrDefault();
+            }
+            else
+            {
+                caseId = db.Cases.AsNoTracking()
+                    .Where(x => x.CaseNumber == selector)
+                    .Select(x => (int?)x.Id)
+                    .FirstOrDefault();
+            }
+        }
+
+        if (caseId is not int id)
+        {
+            AddDashboardConsoleLine($"Case not found: {selector}", Color.FromRgb(255, 142, 142), true);
+            return;
+        }
+
+        AddDashboardConsoleLine($"Opening case ID {id} in the GHOST workspace...",
+            Color.FromRgb(99, 255, 160), true);
+        OpenCaseWorkspace(id);
     }
 
     private void StopDashboardPowerShell()
