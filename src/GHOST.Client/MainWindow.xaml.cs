@@ -24,6 +24,7 @@ public partial class MainWindow : Window
 
     private List<NetworkNodeView> _nodes = [];
     private List<NetworkConnectionView> _connections = [];
+    private UIElement? _activeModuleContent;
 
     public MainWindow()
     {
@@ -52,9 +53,56 @@ public partial class MainWindow : Window
         Closed += (_, _) => _clockTimer.Stop();
     }
 
+    private void ShowModuleView(UIElement content, string title)
+    {
+        DashboardView.Visibility = Visibility.Collapsed;
+        NetworkView.Visibility = Visibility.Collapsed;
+        ModuleView.Visibility = Visibility.Visible;
+        _activeModuleContent = content;
+
+        var shell = new DockPanel();
+        var header = new Grid
+        {
+            Height = 46,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var heading = new TextBlock
+        {
+            Text = title,
+            FontSize = 18,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(heading, 0);
+        header.Children.Add(heading);
+
+        var backButton = new Button
+        {
+            Content = "← COMMAND CENTER",
+            Padding = new Thickness(12, 8, 12, 8),
+            Margin = new Thickness(12, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        backButton.Click += (_, _) => Dashboard_Click(this, new RoutedEventArgs());
+        Grid.SetColumn(backButton, 1);
+        header.Children.Add(backButton);
+
+        DockPanel.SetDock(header, Dock.Top);
+        shell.Children.Add(header);
+        shell.Children.Add(content);
+        ModuleContent.Content = shell;
+    }
+
     private void Dashboard_Click(object sender, RoutedEventArgs e)
     {
         NetworkView.Visibility = Visibility.Collapsed;
+        ModuleView.Visibility = Visibility.Collapsed;
+        ModuleContent.Content = null;
+        _activeModuleContent = null;
         DashboardView.Visibility = Visibility.Visible;
         PageEyebrow.Text = "PRIVATE INVESTIGATION WORKSPACE";
         PageEyebrow.Visibility = Visibility.Collapsed;
@@ -93,18 +141,6 @@ public partial class MainWindow : Window
 
     private void NewCase_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Window
-        {
-            Title = "GHOST // New Case",
-            Width = 480,
-            Height = 360,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            Background = (Brush)FindResource("BgBrush"),
-            Foreground = Brushes.White,
-            ResizeMode = ResizeMode.NoResize
-        };
-
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock
         {
@@ -159,7 +195,7 @@ public partial class MainWindow : Window
             Width = 90,
             Margin = new Thickness(0, 0, 8, 0)
         };
-        cancel.Click += (_, _) => dialog.Close();
+        cancel.Click += (_, _) => Dashboard_Click(this, new RoutedEventArgs());
 
         var save = new Button { Content = "SAVE CASE", Width = 110 };
         save.Click += (_, _) =>
@@ -167,7 +203,7 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(title.Text))
             {
                 MessageBox.Show(
-                    dialog,
+                    this,
                     "Enter a case title.",
                     "GHOST",
                     MessageBoxButton.OK,
@@ -198,7 +234,7 @@ public partial class MainWindow : Window
                 });
                 db.SaveChanges();
 
-                dialog.Close();
+                Dashboard_Click(this, new RoutedEventArgs());
                 RefreshStats();
 
                 MessageBox.Show(
@@ -211,7 +247,7 @@ public partial class MainWindow : Window
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    dialog,
+                    this,
                     $"The case could not be saved.\n\n{ex.Message}",
                     "GHOST // Save error",
                     MessageBoxButton.OK,
@@ -222,27 +258,11 @@ public partial class MainWindow : Window
         buttons.Children.Add(cancel);
         buttons.Children.Add(save);
         panel.Children.Add(buttons);
-        dialog.Content = panel;
-        dialog.ShowDialog();
+        ShowModuleView(panel, "NEW CASE");
     }
 
     private void Cases_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Window
-        {
-            Title = "GHOST // Case Files",
-            Width = 930,
-            Height = 610,
-            MinWidth = 760,
-            MinHeight = 500,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            Background = (Brush)FindResource("BgBrush"),
-            Foreground = Brushes.White,
-            FontFamily = (FontFamily)FindResource("HackerFont"),
-            ResizeMode = ResizeMode.CanResize
-        };
-
         var panel = new DockPanel { Margin = new Thickness(20) };
         var headingPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
         headingPanel.Children.Add(new TextBlock
@@ -296,12 +316,12 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 8, 0)
         };
         var close = new Button { Content = "DONE", Width = 92, Margin = new Thickness(0) };
-        close.Click += (_, _) => dialog.Close();
+        close.Click += (_, _) => Dashboard_Click(this, new RoutedEventArgs());
         statusButton.Click += (_, _) =>
         {
             if (list.SelectedItem is not CaseArchiveRow selected)
             {
-                MessageBox.Show(dialog, "Select a case first.", "GHOST",
+                MessageBox.Show(this, "Select a case first.", "GHOST",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -334,7 +354,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show(dialog, $"The case status could not be changed.\n\n{ex.Message}",
+                MessageBox.Show(this, $"The case status could not be changed.\n\n{ex.Message}",
                     "GHOST // Update error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
@@ -375,19 +395,21 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show(dialog, $"The case archive could not be loaded.\n\n{ex.Message}",
+                MessageBox.Show(this, $"The case archive could not be loaded.\n\n{ex.Message}",
                     "GHOST // Archive error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        dialog.Content = panel;
+        ShowModuleView(panel, "CASE FILES");
         RefreshRows();
-        dialog.ShowDialog();
     }
 
     private void Network_Click(object sender, RoutedEventArgs e)
     {
         DashboardView.Visibility = Visibility.Collapsed;
+        ModuleView.Visibility = Visibility.Collapsed;
+        ModuleContent.Content = null;
+        _activeModuleContent = null;
         NetworkView.Visibility = Visibility.Visible;
         RefreshNetwork();
     }
@@ -822,21 +844,6 @@ public partial class MainWindow : Window
 
     private void FieldLab_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Window
-        {
-            Title = "GHOST // Field Lab",
-            Width = 1000,
-            Height = 690,
-            MinWidth = 800,
-            MinHeight = 540,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            Background = (Brush)FindResource("BgBrush"),
-            Foreground = Brushes.White,
-            FontFamily = (FontFamily)FindResource("HackerFont"),
-            ResizeMode = ResizeMode.CanResize
-        };
-
         var root = new DockPanel { Margin = new Thickness(20) };
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
         header.Children.Add(new TextBlock
@@ -965,7 +972,7 @@ public partial class MainWindow : Window
         }
         casePicker.SelectionChanged += (_, _) =>
         {
-            if (dialog.IsLoaded)
+            if (ReferenceEquals(_activeModuleContent, root))
                 RefreshEntries();
         };
         typeBox.SelectionChanged += (_, _) =>
@@ -1062,28 +1069,12 @@ public partial class MainWindow : Window
             }
         };
 
-        dialog.Content = root;
+        ShowModuleView(root, "FIELD LAB");
         RefreshEntries();
-        dialog.ShowDialog();
     }
 
     private void DigitalLab_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Window
-        {
-            Title = "GHOST // Digital Lab",
-            Width = 1040,
-            Height = 700,
-            MinWidth = 820,
-            MinHeight = 540,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            Background = (Brush)FindResource("BgBrush"),
-            Foreground = Brushes.White,
-            FontFamily = (FontFamily)FindResource("HackerFont"),
-            ResizeMode = ResizeMode.CanResize
-        };
-
         var root = new DockPanel { Margin = new Thickness(20) };
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
         header.Children.Add(new TextBlock
@@ -1299,7 +1290,7 @@ public partial class MainWindow : Window
 
         casePicker.SelectionChanged += (_, _) =>
         {
-            if (dialog.IsLoaded)
+            if (ReferenceEquals(_activeModuleContent, root))
                 RefreshExperiments();
         };
         experimentList.SelectionChanged += (_, _) =>
@@ -1504,32 +1495,83 @@ public partial class MainWindow : Window
             }
         };
 
-        dialog.Content = root;
+        ShowModuleView(root, "DIGITAL LAB");
         RefreshExperiments();
-        dialog.ShowDialog();
     }
 
-    private void EvidenceVault_Click(object sender, RoutedEventArgs e) => ComingSoon_Click(sender, e);
+    private void EvidenceVault_Click(object sender, RoutedEventArgs e)
+    {
+        var panel = new StackPanel { Margin = new Thickness(8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "EVIDENCE VAULT // LOCAL ARCHIVE",
+            FontSize = 16,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "This workspace stays inside the main GHOST window. The file-import workflow is the next module to complete.",
+            FontSize = 11,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Planned: copy originals into the local vault, calculate SHA-256, verify stored copies, record provenance, and archive entries without deleting source files.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 760
+        });
+        ShowModuleView(panel, "EVIDENCE VAULT");
+    }
+
 
     private void Terminal_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(
-            this,
-            "Local command console is planned for a later milestone. No system shell commands are executed by this build.",
-            "GHOST // Terminal",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var panel = new StackPanel { Margin = new Thickness(8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "LOCAL CONSOLE // NOT ACTIVE",
+            FontSize = 16,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "The terminal module is not implemented yet. This view does not execute system shell commands.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap
+        });
+        ShowModuleView(panel, "GHOST TERMINAL");
     }
+
 
     private void ComingSoon_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(
-            this,
-            "This module is part of the GHOST roadmap and is not implemented in this foundation build yet.",
-            "GHOST",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var title = (sender as Button)?.Content?.ToString() ?? "WORKSPACE MODULE";
+        var panel = new StackPanel { Margin = new Thickness(8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "MODULE NOT IMPLEMENTED YET",
+            FontSize = 16,
+            Foreground = (Brush)FindResource("AmberBrush"),
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "This feature is planned for a later milestone. Navigation stays in the current GHOST window; no extra page or window is opened.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 720
+        });
+        ShowModuleView(panel, title);
     }
+
 
     private sealed record FieldCaseOption(int Id, string CaseNumber, string Title)
     {
