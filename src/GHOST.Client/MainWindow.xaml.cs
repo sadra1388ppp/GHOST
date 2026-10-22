@@ -208,7 +208,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("GHOST SHELL  /  NATIVE POWERSHELL", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine("Full PowerShell commands run with the permissions of your Windows account.",
             Color.FromRgb(245, 196, 106));
-        AddDashboardConsoleLine("Type 'ghost help' for GHOST commands; all other commands run in PowerShell.",
+        AddDashboardConsoleLine("Type 'ghost help' for app commands; saved custom command names also run here.",
             Color.FromRgb(136, 171, 148));
         AddDashboardConsoleLine(string.Empty, Color.FromRgb(99, 255, 160));
         StartDashboardPowerShell();
@@ -559,7 +559,7 @@ public partial class MainWindow : Window
                 break;
             default:
                 AddDashboardConsoleLine(
-                    $"Unknown GHOST command: '{command}'. Type 'ghost help' to list the 10 built-in commands.",
+                    $"Unknown GHOST command: '{command}'. Type 'ghost help' to list app commands and custom-command options.",
                     Color.FromRgb(255, 177, 107), true);
                 break;
         }
