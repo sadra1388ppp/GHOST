@@ -817,6 +817,253 @@ public partial class MainWindow : Window
         }
     }
 
+    private void FieldLab_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = "GHOST // Field Lab",
+            Width = 1000,
+            Height = 690,
+            MinWidth = 800,
+            MinHeight = 540,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            Background = (Brush)FindResource("BgBrush"),
+            Foreground = Brushes.White,
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            ResizeMode = ResizeMode.CanResize
+        };
+
+        var root = new DockPanel { Margin = new Thickness(20) };
+        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        header.Children.Add(new TextBlock
+        {
+            Text = "FIELD LAB // NOTES & MEASUREMENTS",
+            FontSize = 19,
+            Foreground = (Brush)FindResource("NeonBrush")
+        });
+        header.Children.Add(new TextBlock
+        {
+            Text = "Record what happened, where it happened, and any measurement. Every entry is timestamped and auditable.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var casePicker = new ComboBox
+        {
+            Height = 34,
+            DisplayMemberPath = nameof(FieldCaseOption.DisplayText),
+            Margin = new Thickness(0, 0, 0, 10),
+            ToolTip = "Select the related case"
+        };
+        DockPanel.SetDock(casePicker, Dock.Top);
+        root.Children.Add(casePicker);
+
+        var form = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        var typeBox = new ComboBox { Height = 34, Margin = new Thickness(0, 0, 0, 7) };
+        typeBox.Items.Add("Field Note");
+        typeBox.Items.Add("Measurement");
+        typeBox.SelectedIndex = 0;
+        var titleBox = new TextBox { Height = 34, ToolTip = "Short title", Margin = new Thickness(0, 0, 0, 7) };
+        var locationBox = new TextBox { Height = 34, ToolTip = "Optional location or site description", Margin = new Thickness(0, 0, 0, 7) };
+        var detailsBox = new TextBox
+        {
+            Height = 72,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            ToolTip = "Observation, circumstances, and method",
+            Margin = new Thickness(0, 0, 0, 7)
+        };
+        var measurementRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 7) };
+        var valueBox = new TextBox { Width = 150, Height = 34, ToolTip = "Optional numeric value", Margin = new Thickness(0, 0, 7, 0) };
+        var unitBox = new TextBox { Width = 150, Height = 34, ToolTip = "Measurement unit" };
+        measurementRow.Children.Add(valueBox);
+        measurementRow.Children.Add(unitBox);
+        var saveButton = new Button { Content = "SAVE FIELD ENTRY", Width = 190, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0) };
+        form.Children.Add(typeBox);
+        form.Children.Add(titleBox);
+        form.Children.Add(locationBox);
+        form.Children.Add(detailsBox);
+        form.Children.Add(measurementRow);
+        form.Children.Add(saveButton);
+        DockPanel.SetDock(form, Dock.Top);
+        root.Children.Add(form);
+
+        var status = new TextBlock
+        {
+            Text = "Select a case to view and create field entries.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 7, 0, 0)
+        };
+        DockPanel.SetDock(status, Dock.Bottom);
+        root.Children.Add(status);
+
+        var entriesList = new ListView
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            Foreground = Brushes.White,
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            DisplayMemberPath = nameof(FieldTimelineRow.DisplayText)
+        };
+        root.Children.Add(entriesList);
+
+        void RefreshEntries()
+        {
+            try
+            {
+                if (casePicker.SelectedItem is not FieldCaseOption selectedCase)
+                {
+                    entriesList.ItemsSource = Array.Empty<FieldTimelineRow>();
+                    status.Text = "Create a case first, then select it here.";
+                    return;
+                }
+
+                using var db = new GhostDbContext();
+                var rows = db.TimelineEvents.AsNoTracking()
+                    .Where(x => x.CaseFileId == selectedCase.Id)
+                    .OrderByDescending(x => x.OccurredAt)
+                    .ToList()
+                    .Where(x => x.Title.StartsWith("FIELD NOTE:", StringComparison.OrdinalIgnoreCase) ||
+                                x.Title.StartsWith("FIELD MEASUREMENT:", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => new FieldTimelineRow(
+                        x.Id,
+                        x.Title,
+                        x.Details,
+                        x.OccurredAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")))
+                    .ToList();
+
+                entriesList.ItemsSource = rows;
+                status.Text = rows.Count == 0
+                    ? "No field entries for this case yet. Use the form above to record the first one."
+                    : $"Loaded {rows.Count} field entries. New entries are kept in the case timeline.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Field entries could not be loaded: {ex.Message}";
+            }
+        }
+
+        using (var db = new GhostDbContext())
+        {
+            casePicker.ItemsSource = db.Cases.AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList()
+                .Select(x => new FieldCaseOption(x.Id, x.CaseNumber, x.Title))
+                .ToList();
+            casePicker.SelectedIndex = casePicker.Items.Count > 0 ? 0 : -1;
+        }
+        casePicker.SelectionChanged += (_, _) =>
+        {
+            if (dialog.IsLoaded)
+                RefreshEntries();
+        };
+        typeBox.SelectionChanged += (_, _) =>
+        {
+            var isMeasurement = typeBox.SelectedItem?.ToString() == "Measurement";
+            valueBox.IsEnabled = isMeasurement;
+            unitBox.IsEnabled = isMeasurement;
+        };
+        valueBox.IsEnabled = false;
+        unitBox.IsEnabled = false;
+
+        saveButton.Click += (_, _) =>
+        {
+            if (casePicker.SelectedItem is not FieldCaseOption selectedCase)
+            {
+                status.Text = "Create a case first, then select it here.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(titleBox.Text))
+            {
+                status.Text = "Enter a title for this field entry.";
+                titleBox.Focus();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(detailsBox.Text))
+            {
+                status.Text = "Enter a description of the note or measurement.";
+                detailsBox.Focus();
+                return;
+            }
+
+            var isMeasurement = typeBox.SelectedItem?.ToString() == "Measurement";
+            double? numericValue = null;
+            if (isMeasurement && !string.IsNullOrWhiteSpace(valueBox.Text))
+            {
+                if (!double.TryParse(valueBox.Text.Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var parsed))
+                {
+                    status.Text = "Enter a valid numeric value, for example 12.5.";
+                    valueBox.Focus();
+                    return;
+                }
+                numericValue = parsed;
+            }
+
+            var entryTitle = isMeasurement
+                ? "FIELD MEASUREMENT: " + titleBox.Text.Trim()
+                : "FIELD NOTE: " + titleBox.Text.Trim();
+            var entryDetails = detailsBox.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(locationBox.Text))
+                entryDetails += Environment.NewLine + "Location: " + locationBox.Text.Trim();
+            if (isMeasurement && numericValue.HasValue)
+                entryDetails += Environment.NewLine + "Measurement: " +
+                    numericValue.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                    (string.IsNullOrWhiteSpace(unitBox.Text) ? "" : " " + unitBox.Text.Trim());
+
+            try
+            {
+                using var db = new GhostDbContext();
+                using var transaction = db.Database.BeginTransaction();
+                var now = DateTime.UtcNow;
+                var timelineEvent = new TimelineEvent
+                {
+                    CaseFileId = selectedCase.Id,
+                    Title = entryTitle,
+                    Details = entryDetails,
+                    OccurredAt = now
+                };
+                db.TimelineEvents.Add(timelineEvent);
+                db.SaveChanges();
+                db.AuditLogs.Add(new AuditEntry
+                {
+                    EntityType = "FieldEntry",
+                    EntityId = timelineEvent.Id,
+                    Action = "Created",
+                    Details = $"{entryTitle}; case {selectedCase.CaseNumber}; recorded at {now:O}"
+                });
+                db.SaveChanges();
+                transaction.Commit();
+
+                titleBox.Clear();
+                locationBox.Clear();
+                detailsBox.Clear();
+                valueBox.Clear();
+                unitBox.Clear();
+                RefreshEntries();
+                status.Text = "Field entry saved to the case timeline with an audit record.";
+            }
+            catch (Exception ex)
+            {
+                status.Text = $"Field entry could not be saved: {ex.Message}";
+            }
+        };
+
+        dialog.Content = root;
+        RefreshEntries();
+        dialog.ShowDialog();
+    }
+
     private void DigitalLab_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Window
@@ -1278,6 +1525,17 @@ public partial class MainWindow : Window
             "GHOST",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
+    }
+
+    private sealed record FieldCaseOption(int Id, string CaseNumber, string Title)
+    {
+        public string DisplayText => $"{CaseNumber} / {Title}";
+    }
+
+    private sealed record FieldTimelineRow(int Id, string Title, string Details, string OccurredAt)
+    {
+        public string DisplayText =>
+            $"{OccurredAt} | {Title} | {(Details.Length > 105 ? Details[..102] + "..." : Details)}";
     }
 
     private sealed record LabCaseOption(int Id, string CaseNumber, string Title)
