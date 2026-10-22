@@ -32,8 +32,8 @@ Read this note first in a future development session, then inspect the newest ma
 - WPF shell, dashboard stats, recent cases, SQLite initialization.
 - Create case and audit creation.
 - Searchable Case Files archive with Open/Closed transitions. Status changes create audit entries and refresh dashboard/network counts.
-- Digital Lab: create case-linked experiments with category, hypothesis, procedure and results; add text/numeric observations; audit changes and create case timeline events.
-- Field Lab: create case-linked field notes or measurements with optional location and numeric value/unit; entries are persisted as timeline events and audit history.
+- Digital Lab: create case-linked experiments with category, hypothesis, procedure and results; add text/numeric observations; audit changes and create case timeline events. New experiments are selected after saving.
+- Field Lab: create case-linked field notes or measurements with optional location and numeric value/unit; entries are persisted as timeline events and audit history. This is a first pass using timeline records, not a dedicated field-record data model.
 - Investigation Network is embedded in the same MainWindow.
 - Graph nodes for case, evidence, experiments, and observations; create/delete relationships with notes/confidence and audit records.
 - Windows CI workflow at .github/workflows/windows-build.yml.
@@ -41,7 +41,7 @@ Read this note first in a future development session, then inspect the newest ma
 ## Still not complete / critical limitations
 
 - The app has NOT been run locally on the user's machine by the assistant.
-- Latest size/case changes must be validated by the latest Windows Actions workflow before claiming a successful build.
+- Latest startup sizing, case archive, Digital Lab, and Field Lab changes must be validated by the latest Windows Actions workflow before claiming a successful build.
 - Evidence Vault remains a placeholder. Digital Lab and Field Lab have first-pass data-entry flows but need broader validation, record editing, evidence associations, and more complete specialized data models.
 - No completed timeline/reporting/backup-and-restore workflow yet.
 - Database encryption at rest and protected backups are not implemented. Do not recommend storing sensitive evidence.
