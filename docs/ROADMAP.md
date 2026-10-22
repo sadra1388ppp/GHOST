@@ -1,6 +1,6 @@
 # GHOST — End-to-End Product Roadmap
 
-GHOST is an offline-first Windows investigation workspace. This roadmap is the single source of truth for building a usable, reliable release without losing the current dark workstation UI or the requirement that Investigation Network remains inside the main window.
+GHOST is an offline-first Windows investigation workspace. This roadmap is the single source of truth for building a usable, reliable release without losing the current dark workstation UI or the requirement that every workspace section, not just Investigation Network, stays inside the existing MainWindow. Workspace navigation must never create a child WPF Window.
 
 ## Product completion criteria
 
@@ -13,6 +13,7 @@ The project is ready for a first daily-use release only when a user can create a
 - [x] Dashboard metrics and recent cases
 - [x] Create case and persist an audit record
 - [x] Investigation Network embedded in the existing MainWindow
+- [x] All workspace modules swap content inside the same MainWindow; no child windows for navigation
 - [x] Create/delete typed links and record relationship changes in audit history
 - [x] Windows Release build workflow
 - [x] Standard startup size with screen-aware centering and minimum constraints
