@@ -1032,7 +1032,9 @@ public partial class MainWindow : Window
 
     private void RefreshSystemMonitor(bool forceDiskRefresh = false)
     {
-        ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
+        var localNow = DateTime.Now;
+        ClockText.Text = localNow.ToString("HH:mm:ss");
+        ClockDateText.Text = localNow.ToString("ddd, dd MMM yyyy").ToUpperInvariant();
         SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} AVAILABLE CPUs";
         SystemUptimeText.Text = $"SYSTEM UPTIME / {FormatUptime(Environment.TickCount64)}";
 
