@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using GHOST.Infrastructure.Persistence;
 using GHOST.Models;
 using Microsoft.EntityFrameworkCore;
@@ -9,15 +10,26 @@ namespace GHOST;
 
 public partial class MainWindow : Window
 {
+    private readonly DispatcherTimer _clockTimer = new()
+    {
+        Interval = TimeSpan.FromSeconds(1)
+    };
+
     public MainWindow()
     {
         InitializeComponent();
+
+        _clockTimer.Tick += (_, _) => ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
+        _clockTimer.Start();
+
         Loaded += (_, _) => RefreshStats();
+        Closed += (_, _) => _clockTimer.Stop();
     }
 
     private void Dashboard_Click(object sender, RoutedEventArgs e)
     {
-        PageEyebrow.Text = "SYSTEM OVERVIEW / LOCAL INSTANCE";
+        PageEyebrow.Text = "PRIVATE INVESTIGATION WORKSPACE";
+        PageEyebrow.Visibility = Visibility.Collapsed;
         PageTitle.Text = "Command Center";
         RefreshStats();
     }
@@ -25,11 +37,30 @@ public partial class MainWindow : Window
     private void RefreshStats()
     {
         using var db = new GhostDbContext();
+
         CasesCount.Text = db.Cases.Count(x => x.Status == "Open").ToString();
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
         LinksCount.Text = db.Relationships.Count().ToString();
         ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
+
+        var recentCases = db.Cases
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(4)
+            .ToList();
+
+        RecentCasesList.ItemsSource = recentCases
+            .Select(x => new RecentCaseSummary(
+                x.CaseNumber,
+                x.Title,
+                x.Status,
+                x.CreatedAt.ToLocalTime().ToString("dd MMM  HH:mm")))
+            .ToList();
+
+        EmptyCasesHint.Visibility = recentCases.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void NewCase_Click(object sender, RoutedEventArgs e)
@@ -130,7 +161,6 @@ public partial class MainWindow : Window
                 db.Cases.Add(item);
                 db.SaveChanges();
 
-                // Save the audit record after the case so EntityId contains its generated ID.
                 db.AuditLogs.Add(new AuditEntry
                 {
                     EntityType = "Case",
@@ -180,7 +210,8 @@ public partial class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = this,
             Background = (Brush)FindResource("BgBrush"),
-            Foreground = Brushes.White
+            Foreground = Brushes.White,
+            FontFamily = (FontFamily)FindResource("HackerFont")
         };
 
         var panel = new DockPanel { Margin = new Thickness(20) };
@@ -198,7 +229,8 @@ public partial class MainWindow : Window
         {
             Background = (Brush)FindResource("PanelBrush"),
             Foreground = Brushes.White,
-            BorderBrush = (Brush)FindResource("LineBrush")
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            FontFamily = (FontFamily)FindResource("HackerFont")
         };
 
         list.ItemsSource = db.Cases
@@ -219,7 +251,6 @@ public partial class MainWindow : Window
         close.Click += (_, _) => dialog.Close();
         DockPanel.SetDock(close, Dock.Bottom);
         panel.Children.Add(close);
-
         dialog.Content = panel;
         dialog.ShowDialog();
     }
@@ -227,6 +258,7 @@ public partial class MainWindow : Window
     private void Board_Click(object sender, RoutedEventArgs e)
     {
         PageEyebrow.Text = "INTELLIGENCE / RELATIONSHIP MAPPING";
+        PageEyebrow.Visibility = Visibility.Collapsed;
         PageTitle.Text = "Investigation Board";
 
         MessageBox.Show(
@@ -256,4 +288,10 @@ public partial class MainWindow : Window
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
+
+    private sealed record RecentCaseSummary(
+        string CaseNumber,
+        string Title,
+        string Status,
+        string CreatedAt);
 }
