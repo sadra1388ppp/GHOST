@@ -6,7 +6,7 @@ Offline-first digital and field investigation lab for Windows.
 
 ## Status
 
-Project foundation is being built. The first milestone is a dark WPF desktop shell, local SQLite persistence, evidence integrity tools, and an investigation relationship board.
+Current foundation includes the dark WPF dashboard, local SQLite persistence, case creation/listing, and an in-window Investigation Network for creating and reviewing record relationships. Evidence import/integrity verification, Digital Lab, Field Lab, and encryption hardening are still pending.
 
 ## Planned stack
 
