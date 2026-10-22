@@ -235,7 +235,7 @@
             </Border>
 
             <!-- METRIC CARDS -->
-            <UniformGrid Grid.Row="2" Columns="3" Margin="0,0,0,16">
+            <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,16">
                 <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                         BorderThickness="1" CornerRadius="8" Padding="15,12" Margin="0,0,10,0">
                     <Grid>
@@ -257,6 +257,27 @@
                         </Border>
                     </Grid>
                 </Border>
+<Border Background="{StaticResource PanelBrush}" BorderBrush="#6D2A31"
+        BorderThickness="1" CornerRadius="8" Padding="15,12" Margin="0,0,10,0">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Text="CLOSED CASES" FontSize="9" Foreground="#FF7A83" />
+            <TextBlock x:Name="ClosedCasesCount" Text="0" FontSize="28"
+                       Foreground="#FF5C68" Margin="0,4,0,1" />
+            <TextBlock Text="COMPLETED INVESTIGATIONS" FontSize="7"
+                       Foreground="#B97980" />
+        </StackPanel>
+        <Border Grid.Column="1" Width="32" Height="32" CornerRadius="7"
+                Background="#35181D" VerticalAlignment="Top">
+            <TextBlock Text="✓" FontSize="17" Foreground="#FF5C68"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </Grid>
+</Border>
                 <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                         BorderThickness="1" CornerRadius="8" Padding="15,12" Margin="0,0,10,0">
                     <Grid>

@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         using var db = new GhostDbContext();
 
         CasesCount.Text = db.Cases.Count(x => x.Status == "Open").ToString();
+        ClosedCasesCount.Text = db.Cases.Count(x => x.Status == "Closed").ToString();
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
         ClockText.Text = $"LOCAL // {DateTime.Now:HH:mm:ss}";
