@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Shapes;
@@ -7,6 +8,8 @@ using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.IO;
+using IOPath = System.IO.Path;
 using Microsoft.Win32;
 using GHOST.Infrastructure.Persistence;
 using GHOST.Models;
@@ -852,17 +855,17 @@ public partial class MainWindow : Window
     }
 
     private static string GetGhostDataDirectory() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
+        IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
 
     private static string GetEvidenceFilePath(string relativePath)
     {
-        var root = Path.GetFullPath(GetGhostDataDirectory());
-        var fullPath = Path.GetFullPath(Path.Combine(root, relativePath ?? string.Empty));
-        var relative = Path.GetRelativePath(root, fullPath);
+        var root = IOPath.GetFullPath(GetGhostDataDirectory());
+        var fullPath = IOPath.GetFullPath(IOPath.Combine(root, relativePath ?? string.Empty));
+        var relative = IOPath.GetRelativePath(root, fullPath);
         if (relative == "." ||
             relative == ".." ||
-            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
-            Path.IsPathRooted(relative))
+            relative.StartsWith(".." + IOPath.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            IOPath.IsPathRooted(relative))
         {
             throw new InvalidOperationException("The evidence path points outside the GHOST data folder.");
         }
@@ -2389,7 +2392,7 @@ public partial class MainWindow : Window
             var imported = 0;
             var lastId = 0;
             var dataRoot = GetGhostDataDirectory();
-            var evidenceDirectory = Path.Combine(dataRoot, "Evidence");
+            var evidenceDirectory = IOPath.Combine(dataRoot, "Evidence");
             Directory.CreateDirectory(evidenceDirectory);
 
             try
@@ -2401,17 +2404,17 @@ public partial class MainWindow : Window
                     using var transaction = db.Database.BeginTransaction();
                     try
                     {
-                        var extension = Path.GetExtension(sourcePath);
+                        var extension = IOPath.GetExtension(sourcePath);
                         var storedName = Guid.NewGuid().ToString("N") + extension;
-                        copiedPath = Path.Combine(evidenceDirectory, storedName);
+                        copiedPath = IOPath.Combine(evidenceDirectory, storedName);
                         File.Copy(sourcePath, copiedPath, overwrite: false);
                         var hash = ComputeSha256(copiedPath);
                         var evidence = new EvidenceItem
                         {
                             CaseFileId = selectedCase.Id,
-                            Title = Path.GetFileName(sourcePath),
+                            Title = IOPath.GetFileName(sourcePath),
                             EvidenceType = string.IsNullOrWhiteSpace(extension) ? "File" : extension.TrimStart('.').ToUpperInvariant(),
-                            RelativePath = Path.Combine("Evidence", storedName),
+                            RelativePath = IOPath.Combine("Evidence", storedName),
                             Sha256 = hash,
                             Notes = string.Empty,
                             CollectedAt = DateTime.UtcNow
