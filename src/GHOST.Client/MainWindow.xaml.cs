@@ -747,6 +747,7 @@ public partial class MainWindow : Window
                 SelectedNodeTitle.Text = _selectedNetworkNode.Title;
                 SelectedNodeDetails.Text = $"{_selectedNetworkNode.Type.ToUpperInvariant()} / RECORD ID {_selectedNetworkNode.Id}\n{_selectedNetworkNode.Subtitle}";
                 OpenSelectedNodeButton.IsEnabled = true;
+                DrawGraph();
             }
         };
 
@@ -972,8 +973,8 @@ public partial class MainWindow : Window
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
-            DrawGraph();
             _selectedNetworkNode = null;
+            DrawGraph();
             SelectedNodeTitle.Text = "Select a node on the map";
             SelectedNodeDetails.Text = "Click a node to inspect its local record, then open it to continue the investigation.";
             OpenSelectedNodeButton.IsEnabled = false;
