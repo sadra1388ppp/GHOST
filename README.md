@@ -6,9 +6,9 @@ Offline-first digital and field investigation lab for Windows.
 
 ## Current status
 
-GHOST is in active development. The app currently includes a dark WPF command center, local SQLite persistence, case creation, searchable case archive with open/closed status changes, and an Investigation Network embedded in the main window. Startup sizing adapts to the available desktop workspace.
+GHOST is in active development. The app currently includes a dark WPF command center, local SQLite persistence, case creation and search, open/closed case status changes, first-pass Digital Lab experiments/observations, first-pass Field Lab notes/measurements, and an Investigation Network embedded in the main window. Startup sizing adapts to the available desktop workspace.
 
-Evidence import and integrity verification, Digital Lab, Field Lab, case timeline/report export, verified backup/restore, encryption hardening, and a packaged release are still on the roadmap. Features are not considered complete until their persistence, audit history, error handling, and validation are tested.
+Evidence Vault import and integrity verification, editing/association workflows, a complete timeline/report UI, verified backup/restore, encryption hardening, and a packaged release are still on the roadmap. Features are not considered complete until their persistence, audit history, error handling, and validation are tested.
 
 ## Run from source
 
