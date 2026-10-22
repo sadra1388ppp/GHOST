@@ -520,6 +520,9 @@ public partial class MainWindow : Window
             case "cases":
                 RunGhostReadCommand("cases", ExecuteGhostCases);
                 break;
+            case "case":
+                RunGhostReadCommand("case", () => ExecuteGhostCaseCommand(input));
+                break;
             case "evidence":
                 RunGhostReadCommand("evidence", ExecuteGhostEvidence);
                 break;
@@ -568,6 +571,8 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("ghost help                 Show all commands (aliases: 'ghost' and 'ghost ?')", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost status               App + live system snapshot", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost cases                List recent case files", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost case add \"<title>\" [--description \"<text>\"]  Create a case", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost case delete <id|case-number> --confirm  Delete a case and linked records", Color.FromRgb(245, 196, 106));
         AddDashboardConsoleLine("ghost evidence             Evidence and archive totals", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost labs                 Experiments, observations, timeline", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost audit [count]        Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
@@ -653,6 +658,233 @@ public partial class MainWindow : Window
         }
 
         AddDashboardConsoleLine("Use: ghost open <ID or case number>", Color.FromRgb(136, 171, 148));
+    }
+
+    private void ExecuteGhostCaseCommand(string input)
+    {
+        if (!TryParseGhostCommandArguments(input, out var arguments) ||
+            arguments.Count < 3 ||
+            !string.Equals(arguments[0], "ghost", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(arguments[1], "case", StringComparison.OrdinalIgnoreCase))
+        {
+            AddDashboardConsoleLine(
+                "Usage: ghost case add \\"<title>\\" [--description \\"<text>\\"]  |  ghost case delete <id|case-number> --confirm",
+                Color.FromRgb(245, 196, 106), true);
+            return;
+        }
+
+        var action = arguments[2].ToLowerInvariant();
+        if (action == "add")
+        {
+            var descriptionIndex = arguments.FindIndex(3,
+                x => string.Equals(x, "--description", StringComparison.OrdinalIgnoreCase));
+            var titleParts = descriptionIndex >= 0
+                ? arguments.Skip(3).Take(descriptionIndex - 3)
+                : arguments.Skip(3);
+            var title = string.Join(" ", titleParts).Trim();
+            var description = descriptionIndex >= 0
+                ? string.Join(" ", arguments.Skip(descriptionIndex + 1)).Trim()
+                : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                AddDashboardConsoleLine(
+                    "Usage: ghost case add \\"<title>\\" [--description \\"<text>\\"]",
+                    Color.FromRgb(245, 196, 106), true);
+                return;
+            }
+
+            if (title.Length > 200)
+            {
+                AddDashboardConsoleLine("Case title is too long. Maximum length is 200 characters.",
+                    Color.FromRgb(255, 142, 142), true);
+                return;
+            }
+
+            if (descriptionIndex >= 0 && string.IsNullOrWhiteSpace(description))
+            {
+                AddDashboardConsoleLine("Add a description after --description, or omit the option.",
+                    Color.FromRgb(245, 196, 106), true);
+                return;
+            }
+
+            using var db = new GhostDbContext();
+            using var transaction = db.Database.BeginTransaction();
+
+            string caseNumber;
+            do
+            {
+                caseNumber = $"CASE-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(100, 999)}";
+            }
+            while (db.Cases.Any(x => x.CaseNumber == caseNumber));
+
+            var item = new CaseFile
+            {
+                Title = title,
+                Description = description,
+                CaseNumber = caseNumber
+            };
+
+            db.Cases.Add(item);
+            db.SaveChanges();
+            db.AuditLogs.Add(new AuditEntry
+            {
+                EntityType = "Case",
+                EntityId = item.Id,
+                Action = "Created",
+                Details = $"Case created from GHOST terminal: {item.Title}"
+            });
+            db.SaveChanges();
+            transaction.Commit();
+
+            RefreshStats();
+            RefreshNetwork();
+            AddDashboardConsoleLine($"CASE CREATED // ID {item.Id} // {item.CaseNumber}",
+                Color.FromRgb(99, 255, 160), true);
+            AddDashboardConsoleLine($"TITLE       {item.Title}", Color.FromRgb(191, 255, 208));
+            AddDashboardConsoleLine("Use 'ghost open <id|case-number>' to open this case.",
+                Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        if (action == "delete")
+        {
+            if (arguments.Count != 5 ||
+                !string.Equals(arguments[4], "--confirm", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(arguments[3]))
+            {
+                AddDashboardConsoleLine(
+                    "Usage: ghost case delete <id|case-number> --confirm  // confirmation is required",
+                    Color.FromRgb(245, 196, 106), true);
+                return;
+            }
+
+            var identifier = arguments[3].Trim();
+            using var db = new GhostDbContext();
+            CaseFile? match;
+            if (int.TryParse(identifier, out var caseId))
+            {
+                match = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
+            }
+            else
+            {
+                match = db.Cases.AsNoTracking().ToList().FirstOrDefault(x =>
+                    string.Equals(x.CaseNumber, identifier, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (match is null)
+            {
+                AddDashboardConsoleLine($"No case matches '{identifier}'. Nothing was deleted.",
+                    Color.FromRgb(255, 142, 142), true);
+                return;
+            }
+
+            var caseFile = db.Cases.FirstOrDefault(x => x.Id == match.Id);
+            if (caseFile is null)
+            {
+                AddDashboardConsoleLine("The selected case no longer exists. Run 'ghost cases' and try again.",
+                    Color.FromRgb(255, 142, 142), true);
+                return;
+            }
+
+            using var transaction = db.Database.BeginTransaction();
+            var evidence = db.Evidence.Where(x => x.CaseFileId == caseFile.Id).ToList();
+            var experiments = db.Experiments.Where(x => x.CaseFileId == caseFile.Id).ToList();
+            var experimentIds = experiments.Select(x => x.Id).ToHashSet();
+            var observations = db.Observations
+                .Where(x => experimentIds.Contains(x.ExperimentId))
+                .ToList();
+            var observationIds = observations.Select(x => x.Id).ToHashSet();
+            var evidenceIds = evidence.Select(x => x.Id).ToHashSet();
+            var timelineEvents = db.TimelineEvents.Where(x => x.CaseFileId == caseFile.Id).ToList();
+
+            bool IsDeletedRecord(string type, int id) => type.ToLowerInvariant() switch
+            {
+                "case" => id == caseFile.Id,
+                "evidence" => evidenceIds.Contains(id),
+                "experiment" => experimentIds.Contains(id),
+                "observation" => observationIds.Contains(id),
+                _ => false
+            };
+
+            var relatedRelationships = db.Relationships.ToList()
+                .Where(x => IsDeletedRecord(x.SourceType, x.SourceId) ||
+                            IsDeletedRecord(x.TargetType, x.TargetId))
+                .ToList();
+            db.Relationships.RemoveRange(relatedRelationships);
+            db.Observations.RemoveRange(observations);
+            db.Experiments.RemoveRange(experiments);
+            db.Evidence.RemoveRange(evidence);
+            db.TimelineEvents.RemoveRange(timelineEvents);
+            db.Cases.Remove(caseFile);
+            db.AuditLogs.Add(new AuditEntry
+            {
+                EntityType = "Case",
+                EntityId = caseFile.Id,
+                Action = "Deleted",
+                Details = $"Deleted case {caseFile.CaseNumber} ({caseFile.Title}) from GHOST terminal. Removed {evidence.Count} evidence records, {experiments.Count} experiments, {observations.Count} observations, {timelineEvents.Count} timeline events and {relatedRelationships.Count} relationships. Evidence files were retained on disk."
+            });
+            db.SaveChanges();
+            transaction.Commit();
+
+            RefreshStats();
+            RefreshNetwork();
+            AddDashboardConsoleLine(
+                $"CASE DELETED // ID {caseFile.Id} // {caseFile.CaseNumber}",
+                Color.FromRgb(255, 142, 142), true);
+            AddDashboardConsoleLine(
+                $"REMOVED  {evidence.Count} evidence records  |  {experiments.Count} experiments  |  {observations.Count} observations  |  {timelineEvents.Count} timeline events  |  {relatedRelationships.Count} relationships",
+                Color.FromRgb(245, 196, 106));
+            AddDashboardConsoleLine(
+                "Audit history was retained. Evidence files were kept on disk and were not physically deleted.",
+                Color.FromRgb(136, 171, 148));
+            return;
+        }
+
+        AddDashboardConsoleLine(
+            "Unknown case action. Use 'ghost case add' or 'ghost case delete'.",
+            Color.FromRgb(245, 196, 106), true);
+    }
+
+    private static bool TryParseGhostCommandArguments(string input, out List<string> arguments)
+    {
+        arguments = [];
+        var token = new StringBuilder();
+        var inQuotes = false;
+        var tokenStarted = false;
+
+        foreach (var character in input)
+        {
+            if (character == '"')
+            {
+                inQuotes = !inQuotes;
+                tokenStarted = true;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(character) && !inQuotes)
+            {
+                if (tokenStarted)
+                {
+                    arguments.Add(token.ToString());
+                    token.Clear();
+                    tokenStarted = false;
+                }
+
+                continue;
+            }
+
+            token.Append(character);
+            tokenStarted = true;
+        }
+
+        if (inQuotes)
+            return false;
+
+        if (tokenStarted)
+            arguments.Add(token.ToString());
+
+        return true;
     }
 
     private void ExecuteGhostEvidence()
