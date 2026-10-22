@@ -249,7 +249,7 @@ public partial class InvestigationNetworkWindow : Window
                 BorderBrush = label.Brush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(4, 2),
+                Padding = new Thickness(4, 2, 4, 2),
                 Child = new TextBlock
                 {
                     Text = label.Text.ToUpperInvariant(),
