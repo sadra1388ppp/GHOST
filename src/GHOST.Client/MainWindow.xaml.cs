@@ -419,6 +419,7 @@ public partial class MainWindow : Window
                     ? "Open"
                     : "Closed";
                 item.Status = newStatus;
+                item.UpdatedAt = DateTime.UtcNow;
                 db.AuditLogs.Add(new AuditEntry
                 {
                     EntityType = "Case",
@@ -2264,6 +2265,8 @@ public partial class MainWindow : Window
                 var filterCaseId = (casePicker.SelectedItem as VaultCaseOption)?.Id ?? 0;
                 var term = search.Text.Trim();
                 using var db = new GhostDbContext();
+                var caseLabels = db.Cases.AsNoTracking()
+                    .ToDictionary(x => x.Id, x => $"{x.CaseNumber} / {x.Title}");
                 var records = db.Evidence.AsNoTracking()
                     .OrderByDescending(x => x.CollectedAt)
                     .ToList()
@@ -2282,10 +2285,9 @@ public partial class MainWindow : Window
                         {
                             // An invalid or missing path is surfaced through the status/verification action.
                         }
-                        var caseLabel = db.Cases.AsNoTracking()
-                            .Where(c => c.Id == x.CaseFileId)
-                            .Select(c => c.CaseNumber + " / " + c.Title)
-                            .FirstOrDefault() ?? $"CASE #{x.CaseFileId}";
+                        var caseLabel = caseLabels.TryGetValue(x.CaseFileId, out var label)
+                            ? label
+                            : $"CASE #{x.CaseFileId}";
                         return new EvidenceVaultRow(
                             x.Id,
                             x.CaseFileId,
