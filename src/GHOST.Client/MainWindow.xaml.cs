@@ -60,6 +60,7 @@ public partial class MainWindow : Window
     private TextBlock? _terminalConsoleHostText;
     private StackPanel? _terminalCommandListPanel;
     private TextBox? _terminalCommandNameInput;
+    private ComboBox? _terminalCommandTemplatePicker;
     private TextBox? _terminalCommandScriptInput;
     private TextBlock? _terminalCommandEditorStatus;
     private readonly List<ConsoleTranscriptEntry> _consoleTranscript = [];
@@ -3710,7 +3711,7 @@ public partial class MainWindow : Window
         LoadGhostCustomCommands();
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(300) });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(330) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         var managerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
@@ -3747,9 +3748,51 @@ public partial class MainWindow : Window
             ToolTip = "Use one word: letters, numbers, underscores, and hyphens."
         };
         editorPanel.Children.Add(_terminalCommandNameInput);
+
         editorPanel.Children.Add(new TextBlock
         {
-            Text = "POWERSHELL SCRIPT",
+            Text = "READY-MADE TEMPLATE // NO SCRIPT TYPING NEEDED",
+            Foreground = (Brush)FindResource("MutedBrush"),
+            FontSize = 8,
+            Margin = new Thickness(0, 8, 0, 4)
+        });
+        var templateRow = new Grid { Margin = new Thickness(0, 0, 0, 2) };
+        templateRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        templateRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _terminalCommandTemplatePicker = new ComboBox
+        {
+            Height = 28,
+            FontSize = 9,
+            Padding = new Thickness(5, 3, 5, 3),
+            Background = new SolidColorBrush(Color.FromRgb(5, 9, 6)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(37, 71, 46)),
+            Foreground = new SolidColorBrush(Color.FromRgb(200, 248, 212)),
+            ItemsSource = GetGhostCommandTemplates(),
+            DisplayMemberPath = nameof(GhostCommandTemplate.DisplayText),
+            SelectedIndex = 0,
+            ToolTip = "Choose a ready-to-use command; no need to write or paste PowerShell code."
+        };
+        templateRow.Children.Add(_terminalCommandTemplatePicker);
+        var addTemplateButton = new Button
+        {
+            Content = "ADD TEMPLATE",
+            Padding = new Thickness(8, 5, 8, 5),
+            FontSize = 8,
+            Margin = new Thickness(6, 0, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(20, 41, 26)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(44, 104, 64)),
+            Foreground = new SolidColorBrush(Color.FromRgb(143, 255, 177)),
+            ToolTip = "Save the selected ready-made command to your command library."
+        };
+        addTemplateButton.Click += AddSelectedGhostCommandTemplate_Click;
+        Grid.SetColumn(addTemplateButton, 1);
+        templateRow.Children.Add(addTemplateButton);
+        editorPanel.Children.Add(templateRow);
+
+        editorPanel.Children.Add(new TextBlock
+        {
+            Text = "OPTIONAL: EDIT POWERSHELL SCRIPT",
+
             Foreground = (Brush)FindResource("MutedBrush"),
             FontSize = 8,
             Margin = new Thickness(0, 9, 0, 4)
@@ -3757,7 +3800,7 @@ public partial class MainWindow : Window
 
         _terminalCommandScriptInput = new TextBox
         {
-            Height = 112,
+            Height = 72,
             Padding = new Thickness(7, 6, 7, 6),
             AcceptsReturn = true,
             AcceptsTab = true,
@@ -3778,7 +3821,7 @@ public partial class MainWindow : Window
         var editorActions = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 8, 0, 0)
+            Margin = new Thickness(0, 6, 0, 0)
         };
         var saveCommandButton = new Button
         {
@@ -4080,6 +4123,59 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(new Action(() => _terminalConsoleInput?.Focus()));
     }
 
+    private IReadOnlyList<GhostCommandTemplate> GetGhostCommandTemplates() =>
+    [
+        new("sysinfo", "Windows and device details",
+            "Get-ComputerInfo | Select-Object WindowsProductName, OsArchitecture, CsName"),
+        new("processes", "Top 10 running processes",
+            "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Name, Id, CPU"),
+        new("ipconfig", "Network adapter configuration",
+            "Get-NetIPConfiguration | Select-Object InterfaceAlias, IPv4Address, IPv4DefaultGateway"),
+        new("diskspace", "Available disk space",
+            "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name='UsedGB';Expression={[math]::Round($_.Used / 1GB, 2)}}, @{Name='FreeGB';Expression={[math]::Round($_.Free / 1GB, 2)}}"),
+        new("uptime", "Last boot and uptime",
+            "Get-CimInstance Win32_OperatingSystem | Select-Object CSName, @{Name='LastBoot';Expression={$_.LastBootUpTime}}, @{Name='Uptime';Expression={(Get-Date) - $_.LastBootUpTime}}"),
+        new("services", "A sample of running Windows services",
+            "Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 15 Name, Status"),
+        new("policy", "PowerShell execution policy by scope",
+            "Get-ExecutionPolicy -List"),
+        new("history", "Recent commands in this PowerShell session",
+            "Get-History | Select-Object -Last 15")
+    ];
+
+    private void AddSelectedGhostCommandTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_terminalCommandTemplatePicker?.SelectedItem is not GhostCommandTemplate template)
+        {
+            SetGhostCommandEditorStatus("SELECT A TEMPLATE // Choose a ready-made command first.");
+            return;
+        }
+
+        LoadGhostCustomCommands();
+        var existing = _customCommands.FirstOrDefault(x =>
+            string.Equals(x.Name, template.Name, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            if (_terminalCommandNameInput is not null)
+                _terminalCommandNameInput.Text = existing.Name;
+            if (_terminalCommandScriptInput is not null)
+                _terminalCommandScriptInput.Text = existing.Script;
+            SetGhostCommandEditorStatus($"ALREADY SAVED // '{template.Name}' loaded for editing.");
+            return;
+        }
+
+        var saved = new GhostCustomCommand(template.Name, template.Script);
+        _customCommands.Add(saved);
+        if (!PersistGhostCustomCommands())
+        {
+            _customCommands.Remove(saved);
+            return;
+        }
+
+        RefreshGhostCustomCommandList();
+        SetGhostCommandEditorStatus($"ADDED // '{template.Name}' is ready. Run it by typing its name.");
+    }
+
     private void SaveGhostCustomCommand_Click(object sender, RoutedEventArgs e)
     {
         if (_terminalCommandNameInput is null || _terminalCommandScriptInput is null)
@@ -4193,8 +4289,7 @@ public partial class MainWindow : Window
 
         foreach (var customCommand in _customCommands.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
         {
-            var row = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(105) });
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 2) };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -4213,8 +4308,12 @@ public partial class MainWindow : Window
             row.Children.Add(nameText);
 
             var scriptPreview = customCommand.Script.Replace("\r", string.Empty).Replace("\n", " ↵ ");
-            if (scriptPreview.Length > 64)
-                scriptPreview = scriptPreview[..61] + "...";
+            if (scriptPreview.Length > 72)
+                scriptPreview = scriptPreview[..69] + "...";
+            nameText.ToolTip = scriptPreview;
+            row.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            row.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(nameText, 0);
             var description = new TextBlock
             {
                 Text = scriptPreview,
@@ -4223,9 +4322,10 @@ public partial class MainWindow : Window
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center,
                 ToolTip = customCommand.Script,
-                Margin = new Thickness(0, 0, 5, 0)
+                Margin = new Thickness(2, 3, 6, 4)
             };
-            Grid.SetColumn(description, 1);
+            Grid.SetRow(description, 1);
+            Grid.SetColumn(description, 0);
             row.Children.Add(description);
 
             Button MakeSmallButton(string caption, string tooltip) => new()
@@ -4249,27 +4349,50 @@ public partial class MainWindow : Window
                     _terminalCommandScriptInput.Text = customCommand.Script;
                 SetGhostCommandEditorStatus($"EDITING // {customCommand.Name}");
             };
-            Grid.SetColumn(editButton, 2);
+            Grid.SetColumn(editButton, 1);
+            Grid.SetRow(editButton, 0);
             row.Children.Add(editButton);
 
             var runButton = MakeSmallButton("RUN", "Run this custom command in the shared PowerShell session");
             runButton.Click += (_, _) => RunGhostCustomCommandFromButton(customCommand.Name);
-            Grid.SetColumn(runButton, 3);
+            Grid.SetColumn(runButton, 2);
+            Grid.SetRow(runButton, 0);
             row.Children.Add(runButton);
 
-            var deleteButton = MakeSmallButton("DEL", "Delete this saved command");
-            deleteButton.Foreground = new SolidColorBrush(Color.FromRgb(255, 142, 142));
+            var deleteButton = MakeSmallButton("DELETE", "Permanently remove this saved command from GHOST.");
+            deleteButton.Background = new SolidColorBrush(Color.FromRgb(43, 20, 20));
+            deleteButton.BorderBrush = new SolidColorBrush(Color.FromRgb(99, 55, 55));
+            deleteButton.Foreground = new SolidColorBrush(Color.FromRgb(255, 170, 170));
             deleteButton.Click += (_, _) =>
             {
+                var confirmation = MessageBox.Show(
+                    this,
+                    $"Delete the saved command '{customCommand.Name}'? This cannot be undone.",
+                    "Delete Saved Command",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (confirmation != MessageBoxResult.Yes)
+                    return;
+
+                var removed = _customCommands
+                    .Where(x => string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
                 _customCommands.RemoveAll(x =>
                     string.Equals(x.Name, customCommand.Name, StringComparison.OrdinalIgnoreCase));
+
                 if (PersistGhostCustomCommands())
                 {
                     RefreshGhostCustomCommandList();
                     SetGhostCommandEditorStatus($"DELETED // {customCommand.Name}");
                 }
+                else
+                {
+                    _customCommands.AddRange(removed);
+                    RefreshGhostCustomCommandList();
+                }
             };
-            Grid.SetColumn(deleteButton, 4);
+            Grid.SetColumn(deleteButton, 3);
+            Grid.SetRow(deleteButton, 0);
             row.Children.Add(deleteButton);
 
             _terminalCommandListPanel.Children.Add(new Border
@@ -4277,7 +4400,7 @@ public partial class MainWindow : Window
                 Background = new SolidColorBrush(Color.FromRgb(10, 22, 14)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(29, 53, 35)),
                 BorderThickness = new Thickness(0, 0, 0, 1),
-                Padding = new Thickness(2, 5, 2, 5),
+                Padding = new Thickness(5, 7, 5, 7),
                 Child = row
             });
         }
@@ -4425,6 +4548,10 @@ public partial class MainWindow : Window
 
     private sealed record ConsoleTranscriptEntry(string Text, Color Color, bool IsBold);
     private sealed record GhostCustomCommand(string Name, string Script);
+    private sealed record GhostCommandTemplate(string Name, string Description, string Script)
+    {
+        public string DisplayText => $"{Name.ToUpperInvariant()}  //  {Description}";
+    }
 
     private sealed record VaultCaseOption(int Id, string CaseNumber, string Title)
     {
