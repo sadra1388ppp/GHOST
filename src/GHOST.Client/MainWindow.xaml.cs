@@ -8,7 +8,6 @@ using System.Windows.Threading;
 using System.Windows.Data;
 using System.Diagnostics;
 using System.Text;
-using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Globalization;
@@ -60,7 +59,6 @@ public partial class MainWindow : Window
     private readonly List<ConsoleTranscriptEntry> _consoleTranscript = [];
     private string PowerShellHistoryPath => IOPath.Combine(GetGhostDataDirectory(), "PowerShellHistory.txt");
     private int? _selectedCaseId;
-    private int? _selectedEvidenceId;
     private double _graphZoom = 1.0;
 
     public MainWindow()
@@ -2640,25 +2638,6 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("The evidence path points outside the GHOST data folder.");
         }
         return fullPath;
-    }
-
-    private static string ComputeSha256(string path)
-    {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
-        return Convert.ToHexString(SHA256.HashData(stream));
-    }
-
-    private static string FormatFileSize(long size)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        double value = size;
-        var unit = 0;
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-        return $"{value:0.##} {units[unit]}";
     }
 
     private void Network_Click(object sender, RoutedEventArgs e)
