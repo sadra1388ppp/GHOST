@@ -3510,7 +3510,8 @@ public partial class MainWindow : Window
 
     private void DigitalLab_Click(object sender, RoutedEventArgs e)
     {
-        var root = new Grid { Margin = new Thickness(14, 12, 14, 12) };
+        var root = new Grid { Margin = new Thickness(14, 10, 14, 10) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -3587,56 +3588,171 @@ public partial class MainWindow : Window
         Grid.SetRow(header, 0);
         root.Children.Add(header);
 
-        var casePicker = new ComboBox
+        var casePicker = new ListView
         {
-            Height = 36,
-            Width = 300,
-            MaxDropDownHeight = 360,
-            DisplayMemberPath = nameof(LabCaseOption.DisplayText),
-            ToolTip = "Select an investigation to filter its experiments, observations, and available Evidence Vault items"
+            Height = 108,
+            Background = Brushes.Transparent,
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderThickness = new Thickness(0),
+            FontFamily = (FontFamily)FindResource("HackerFont"),
+            SelectionMode = SelectionMode.Single,
+            Padding = new Thickness(0),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ToolTip = "Select an investigation to scope the experiments and observations"
         };
+
+        var caseOptionTemplate = new DataTemplate(typeof(LabCaseOption));
+        var caseOptionCard = new FrameworkElementFactory(typeof(Border));
+        caseOptionCard.SetValue(Border.BackgroundProperty, FindResource("PanelAltBrush"));
+        caseOptionCard.SetValue(Border.BorderBrushProperty, FindResource("LineBrush"));
+        caseOptionCard.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        caseOptionCard.SetValue(Border.CornerRadiusProperty, new CornerRadius(5));
+        caseOptionCard.SetValue(Border.PaddingProperty, new Thickness(8, 6, 8, 6));
+        var caseOptionStack = new FrameworkElementFactory(typeof(StackPanel));
+        var caseOptionNumber = new FrameworkElementFactory(typeof(TextBlock));
+        caseOptionNumber.SetBinding(TextBlock.TextProperty, new Binding(nameof(LabCaseOption.CaseNumber)));
+        caseOptionNumber.SetValue(TextBlock.FontSizeProperty, 8d);
+        caseOptionNumber.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+        caseOptionNumber.SetValue(TextBlock.ForegroundProperty, FindResource("CyanBrush"));
+        caseOptionStack.AppendChild(caseOptionNumber);
+        var caseOptionTitle = new FrameworkElementFactory(typeof(TextBlock));
+        caseOptionTitle.SetBinding(TextBlock.TextProperty, new Binding(nameof(LabCaseOption.Title)));
+        caseOptionTitle.SetValue(TextBlock.FontSizeProperty, 10d);
+        caseOptionTitle.SetValue(TextBlock.ForegroundProperty, FindResource("TextBrush"));
+        caseOptionTitle.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+        caseOptionTitle.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 3, 0, 0));
+        caseOptionStack.AppendChild(caseOptionTitle);
+        caseOptionCard.AppendChild(caseOptionStack);
+        caseOptionTemplate.VisualTree = caseOptionCard;
+        casePicker.ItemTemplate = caseOptionTemplate;
+        var casePickerItemStyle = new Style(
+            typeof(ListViewItem),
+            (Style)FindResource(typeof(ListViewItem)));
+        casePickerItemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+        casePickerItemStyle.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 0, 4)));
+        casePickerItemStyle.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
+        casePickerItemStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+        casePicker.ItemContainerStyle = casePickerItemStyle;
+
         var searchBox = new TextBox
         {
-            Height = 36,
-            Width = 300,
-            ToolTip = "Search titles, objectives, methods, categories, and conclusions",
+            Height = 34,
+            Width = 245,
+            ToolTip = "Search experiment titles, objectives, methods, and conclusions",
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        var categoryFilter = new ComboBox
-        {
-            Height = 36,
-            Width = 145,
-            MaxDropDownHeight = 300,
-            ToolTip = "Show every category or narrow the archive to one analysis type"
-        };
-        foreach (var category in new[] { "All categories", "File Analysis", "Log Analysis", "Network Analysis", "Scientific", "Other" })
-            categoryFilter.Items.Add(category);
-        categoryFilter.SelectedIndex = 0;
 
-        var statusFilter = new ComboBox
+        var selectedCategoryFilter = "All categories";
+        var selectedStatusFilter = "All statuses";
+        var categoryFilterButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
+        var statusFilterButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
+
+        void RefreshFilterChipStyles()
         {
-            Height = 36,
-            Width = 120,
-            MaxDropDownHeight = 240,
-            ToolTip = "Show all experiments, drafts, or completed experiments"
-        };
-        foreach (var item in new[] { "All statuses", "Draft", "Completed" })
-            statusFilter.Items.Add(item);
-        statusFilter.SelectedIndex = 0;
+            foreach (var (value, button) in categoryFilterButtons)
+            {
+                var selected = string.Equals(selectedCategoryFilter, value, StringComparison.OrdinalIgnoreCase);
+                button.Background = selected
+                    ? new SolidColorBrush(Color.FromRgb(22, 52, 61))
+                    : (Brush)FindResource("PanelAltBrush");
+                button.BorderBrush = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("LineBrush");
+                button.Foreground = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("MutedBrush");
+                button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Medium;
+            }
+
+            foreach (var (value, button) in statusFilterButtons)
+            {
+                var selected = string.Equals(selectedStatusFilter, value, StringComparison.OrdinalIgnoreCase);
+                button.Background = selected
+                    ? new SolidColorBrush(Color.FromRgb(22, 52, 61))
+                    : (Brush)FindResource("PanelAltBrush");
+                button.BorderBrush = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("LineBrush");
+                button.Foreground = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("MutedBrush");
+                button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Medium;
+            }
+        }
+
+        Button MakeFilterChip(string label, string value, Dictionary<string, Button> group, Action<string> select)
+        {
+            var button = new Button
+            {
+                Content = label,
+                MinHeight = 30,
+                Padding = new Thickness(9, 5, 9, 5),
+                Margin = new Thickness(0, 0, 4, 2),
+                FontSize = 9,
+                Background = (Brush)FindResource("PanelAltBrush"),
+                BorderBrush = (Brush)FindResource("LineBrush"),
+                Foreground = (Brush)FindResource("MutedBrush"),
+                ToolTip = $"Filter experiments: {label}"
+            };
+            group[value] = button;
+            button.Click += (_, _) =>
+            {
+                select(value);
+                RefreshFilterChipStyles();
+                RefreshMetricsAndArchive();
+            };
+            return button;
+        }
 
         StackPanel MakeToolbarField(string label, UIElement control)
         {
-            var panel = new StackPanel { Margin = new Thickness(0, 0, 6, 0) };
+            var panel = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
             panel.Children.Add(CreateFormLabel(label));
             panel.Children.Add(control);
             return panel;
         }
 
-        var toolbarFields = new WrapPanel { VerticalAlignment = VerticalAlignment.Bottom };
-        toolbarFields.Children.Add(MakeToolbarField("INVESTIGATION", casePicker));
-        toolbarFields.Children.Add(MakeToolbarField("SEARCH ARCHIVE", searchBox));
-        toolbarFields.Children.Add(MakeToolbarField("ANALYSIS CATEGORY", categoryFilter));
-        toolbarFields.Children.Add(MakeToolbarField("EXPERIMENT STATUS", statusFilter));
+        var categoryChipsPanel = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
+        foreach (var category in new[] { "All categories", "File Analysis", "Log Analysis", "Network Analysis", "Scientific", "Other" })
+        {
+            var caption = category switch
+            {
+                "All categories" => "ALL",
+                "File Analysis" => "FILES",
+                "Log Analysis" => "LOGS",
+                "Network Analysis" => "NETWORK",
+                "Scientific" => "SCIENCE",
+                _ => "OTHER"
+            };
+            categoryChipsPanel.Children.Add(MakeFilterChip(
+                caption, category, categoryFilterButtons, value => selectedCategoryFilter = value));
+        }
+
+        var statusChipsPanel = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
+        foreach (var status in new[] { "All statuses", "Draft", "Completed" })
+        {
+            var caption = status switch
+            {
+                "All statuses" => "ALL",
+                "Draft" => "DRAFT",
+                _ => "COMPLETED"
+            };
+            statusChipsPanel.Children.Add(MakeFilterChip(
+                caption, status, statusFilterButtons, value => selectedStatusFilter = value));
+        }
+
+        var categoryGroup = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
+        categoryGroup.Children.Add(CreateFormLabel("CATEGORY"));
+        categoryGroup.Children.Add(categoryChipsPanel);
+        var statusGroup = new StackPanel { Margin = new Thickness(0, 0, 2, 0) };
+        statusGroup.Children.Add(CreateFormLabel("STATUS"));
+        statusGroup.Children.Add(statusChipsPanel);
+
+        var toolbarFields = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
+        toolbarFields.Children.Add(MakeToolbarField("SEARCH EXPERIMENTS", searchBox));
+        toolbarFields.Children.Add(categoryGroup);
+        toolbarFields.Children.Add(statusGroup);
+        RefreshFilterChipStyles();
 
         var caseContextText = new TextBlock
         {
@@ -3675,6 +3791,8 @@ public partial class MainWindow : Window
         var toolbarCard = CreateModuleCard(toolbarContent, new Thickness(0, 0, 0, 8));
         toolbarCard.Padding = new Thickness(10, 8, 10, 9);
         openCasesButton.Click += (_, _) => Cases_Click(this, new RoutedEventArgs());
+        Grid.SetRow(toolbarCard, 1);
+        root.Children.Add(toolbarCard);
 
         Border BuildMetric(string heading, string caption, out TextBlock valueText)
         {
@@ -3713,14 +3831,64 @@ public partial class MainWindow : Window
         metricPanel.Children.Add(BuildMetric("COMPLETED", "With a saved conclusion", out var completedMetric));
         metricPanel.Children.Add(BuildMetric("OBSERVATIONS", "Recorded measurements and notes", out var observationsMetric));
         var workspace = new Grid();
-        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.43, GridUnitType.Star) });
-        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.57, GridUnitType.Star) });
-        Grid.SetRow(workspace, 1);
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.47, GridUnitType.Star) });
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.53, GridUnitType.Star) });
+        Grid.SetRow(workspace, 2);
         root.Children.Add(workspace);
 
         var leftDock = new DockPanel { LastChildFill = true };
-        DockPanel.SetDock(toolbarCard, Dock.Top);
-        leftDock.Children.Add(toolbarCard);
+
+        var caseSelectorContent = new DockPanel { LastChildFill = true };
+        var caseSelectorHeader = new StackPanel { Margin = new Thickness(0, 0, 0, 7) };
+        caseSelectorHeader.Children.Add(new TextBlock
+        {
+            Text = "INVESTIGATIONS",
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("CyanBrush")
+        });
+        caseSelectorHeader.Children.Add(new TextBlock
+        {
+            Text = "Select a case to scope this workspace.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+        DockPanel.SetDock(caseSelectorHeader, Dock.Top);
+        caseSelectorContent.Children.Add(caseSelectorHeader);
+
+        var caseListHost = new Grid { Height = 108 };
+        caseListHost.Children.Add(casePicker);
+        var emptyLabCases = new StackPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            Margin = new Thickness(8)
+        };
+        emptyLabCases.Children.Add(new TextBlock
+        {
+            Text = "NO INVESTIGATIONS",
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        emptyLabCases.Children.Add(new TextBlock
+        {
+            Text = "Create a case to begin.",
+            FontSize = 8,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 4, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        caseListHost.Children.Add(emptyLabCases);
+        caseSelectorContent.Children.Add(caseListHost);
+        var caseSelectorCard = CreateModuleCard(caseSelectorContent, new Thickness(0, 0, 0, 10));
+        caseSelectorCard.Padding = new Thickness(10);
+        DockPanel.SetDock(caseSelectorCard, Dock.Top);
+        leftDock.Children.Add(caseSelectorCard);
+
         var archiveHeader = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -3764,8 +3932,10 @@ public partial class MainWindow : Window
         clearFiltersButton.Click += (_, _) =>
         {
             searchBox.Clear();
-            categoryFilter.SelectedIndex = 0;
-            statusFilter.SelectedIndex = 0;
+            selectedCategoryFilter = "All categories";
+            selectedStatusFilter = "All statuses";
+            RefreshFilterChipStyles();
+            RefreshMetricsAndArchive();
         };
         Grid.SetColumn(clearFiltersButton, 1);
         archiveHeader.Children.Add(clearFiltersButton);
@@ -3808,10 +3978,58 @@ public partial class MainWindow : Window
             ToolTip = "A concise name that explains what you are checking",
             Margin = new Thickness(0, 0, 0, 5)
         };
-        var categoryBox = new ComboBox { Height = 34, Margin = new Thickness(0, 0, 0, 5) };
+        var selectedNewExperimentCategory = "File Analysis";
+        var newCategoryButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
+        var categoryBox = new WrapPanel { Margin = new Thickness(0, 0, 0, 7) };
+
+        void RefreshNewExperimentCategoryChips()
+        {
+            foreach (var (value, button) in newCategoryButtons)
+            {
+                var selected = string.Equals(selectedNewExperimentCategory, value, StringComparison.OrdinalIgnoreCase);
+                button.Background = selected
+                    ? new SolidColorBrush(Color.FromRgb(22, 52, 61))
+                    : (Brush)FindResource("PanelAltBrush");
+                button.BorderBrush = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("LineBrush");
+                button.Foreground = selected
+                    ? (Brush)FindResource("CyanBrush")
+                    : (Brush)FindResource("MutedBrush");
+                button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Medium;
+            }
+        }
+
         foreach (var item in new[] { "File Analysis", "Log Analysis", "Network Analysis", "Scientific", "Other" })
-            categoryBox.Items.Add(item);
-        categoryBox.SelectedIndex = 0;
+        {
+            var caption = item switch
+            {
+                "File Analysis" => "FILES",
+                "Log Analysis" => "LOGS",
+                "Network Analysis" => "NETWORK",
+                "Scientific" => "SCIENCE",
+                _ => "OTHER"
+            };
+            var button = new Button
+            {
+                Content = caption,
+                MinHeight = 30,
+                Padding = new Thickness(9, 5, 9, 5),
+                Margin = new Thickness(0, 0, 4, 3),
+                FontSize = 9,
+                Background = (Brush)FindResource("PanelAltBrush"),
+                BorderBrush = (Brush)FindResource("LineBrush"),
+                Foreground = (Brush)FindResource("MutedBrush")
+            };
+            newCategoryButtons[item] = button;
+            button.Click += (_, _) =>
+            {
+                selectedNewExperimentCategory = item;
+                RefreshNewExperimentCategoryChips();
+            };
+            categoryBox.Children.Add(button);
+        }
+        RefreshNewExperimentCategoryChips();
         var hypothesisBox = new TextBox
         {
             Height = 62,
@@ -4044,19 +4262,25 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 3, 0, 5)
         });
 
-        var evidenceLinkRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        var evidencePicker = new ComboBox
+        var evidenceLinkRow = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        var evidencePicker = new ListView
         {
-            Height = 34,
-            Width = 285,
+            Height = 88,
             DisplayMemberPath = nameof(EvidenceOption.DisplayText),
-            ToolTip = "Choose evidence from the selected investigation"
+            Background = (Brush)FindResource("PanelAltBrush"),
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            FontFamily = new FontFamily("Segoe UI"),
+            SelectionMode = SelectionMode.Single,
+            ToolTip = "Select evidence already preserved in the vault"
         };
         var linkEvidenceButton = new Button
         {
-            Content = "LINK TO EXPERIMENT",
+            Content = "LINK SELECTED EVIDENCE",
             MinHeight = 34,
-            Margin = new Thickness(8, 0, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0, 7, 0, 0),
             IsEnabled = false
         };
         evidenceLinkRow.Children.Add(evidencePicker);
@@ -4275,7 +4499,7 @@ public partial class MainWindow : Window
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(1, 8, 1, 0)
         };
-        Grid.SetRow(footerStatus, 2);
+        Grid.SetRow(footerStatus, 3);
         root.Children.Add(footerStatus);
 
         int? selectedExperimentId = null;
@@ -4345,8 +4569,8 @@ public partial class MainWindow : Window
                 }).ToList();
 
                 var query = searchBox.Text.Trim().ToLowerInvariant();
-                var selectedCategory = categoryFilter.SelectedItem?.ToString() ?? "All categories";
-                var selectedStatus = statusFilter.SelectedItem?.ToString() ?? "All statuses";
+                var selectedCategory = selectedCategoryFilter;
+                var selectedStatus = selectedStatusFilter;
                 var filtered = rows.Where(x =>
                     (string.IsNullOrWhiteSpace(query) || x.SearchText.Contains(query, StringComparison.Ordinal)) &&
                     (selectedCategory == "All categories" || x.Category == selectedCategory) &&
@@ -4568,6 +4792,7 @@ public partial class MainWindow : Window
                 .Select(x => new LabCaseOption(x.Id, x.CaseNumber, x.Title))
                 .ToList();
             casePicker.ItemsSource = cases;
+            emptyLabCases.Visibility = cases.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             casePicker.SelectedItem = _selectedCaseId.HasValue
                 ? cases.FirstOrDefault(x => x.Id == _selectedCaseId.Value) ?? cases.FirstOrDefault()
                 : cases.FirstOrDefault();
@@ -4584,16 +4809,6 @@ public partial class MainWindow : Window
             RefreshMetricsAndArchive();
         };
         searchBox.TextChanged += (_, _) =>
-        {
-            if (ReferenceEquals(_activeModuleContent, root))
-                RefreshMetricsAndArchive();
-        };
-        categoryFilter.SelectionChanged += (_, _) =>
-        {
-            if (ReferenceEquals(_activeModuleContent, root))
-                RefreshMetricsAndArchive();
-        };
-        statusFilter.SelectionChanged += (_, _) =>
         {
             if (ReferenceEquals(_activeModuleContent, root))
                 RefreshMetricsAndArchive();
@@ -4627,7 +4842,7 @@ public partial class MainWindow : Window
                 {
                     CaseFileId = selectedCase.Id,
                     Title = titleBox.Text.Trim(),
-                    Category = categoryBox.SelectedItem?.ToString() ?? "Other",
+                    Category = selectedNewExperimentCategory,
                     Hypothesis = hypothesisBox.Text.Trim(),
                     Procedure = procedureBox.Text.Trim(),
                     Status = "Draft",
@@ -4655,7 +4870,8 @@ public partial class MainWindow : Window
                 titleBox.Clear();
                 hypothesisBox.Clear();
                 procedureBox.Clear();
-                categoryBox.SelectedIndex = 0;
+                selectedNewExperimentCategory = "File Analysis";
+                RefreshNewExperimentCategoryChips();
                 createExpander.IsExpanded = false;
                 RefreshEvidencePicker();
                 RefreshMetricsAndArchive();
