@@ -1,6 +1,6 @@
-# GHOST Digital Lab — Research and Design Notes
+# GHOST Lab Rebuild — Research and Design Notes
 
-GHOST is an offline-first Windows investigation workspace. This design uses established forensic-workstation patterns as references; it does not claim feature parity with specialist suites.
+GHOST is an offline-first Windows investigation workspace. The previous Digital Lab, Field Lab and Evidence Vault page implementations have been removed from the active UI so they can be rebuilt cleanly. This document retains public forensic-workstation references for that future work; it does not describe the retired screens as currently available and does not claim feature parity with specialist suites.
 
 ## Public references reviewed
 
@@ -38,19 +38,20 @@ TRACE demonstrates a compact evidence-review layout: an evidence tree, file resu
 Source:
 - https://trace.gadzhovski.com/
 
-## UI decisions in the current GHOST redesign
+## Design principles for the fresh rebuild
 
-- **Cases stays archive-first.** The prior simple archive/search/action layout is retained instead of adding a separate metrics dashboard and a second detail pane. Case rows show the case number, status, title, and creation time in a readable card.
-- **No popup selectors in Digital Lab.** Investigation selection is a visible case list; category and status filters are persistent chips; the Evidence Vault picker is a visible list. This makes the current choice visible and avoids hard-to-read dropdown menus.
-- **One consistent analysis workspace.** The left side holds investigation context and the searchable experiment archive; the right side contains the selected experiment's overview, observation history, and read-only file tools.
-- **Visible, small-scope filters.** Search covers experiment title, category, status, objective, method, and conclusion. Category and status filters show their current state instead of hiding it in a menu.
-- **An experiment records its reasoning.** Objective/question, method/steps, conclusion, recorded observations, and linked evidence stay connected to the selected case.
-- **Evidence links preserve context.** Linking evidence checks that experiment and evidence belong to the same case, rejects duplicate links and archived evidence, and records audit/timeline entries.
-- **Read-only first-pass file inspection.** The tool calculates SHA-256, reads basic metadata, and previews bounded excerpts from supported text files. It does not execute an evidence file or modify it. Findings can be explicitly saved as an experiment observation.
-- **Keep the workflow honest.** This version does not claim to auto-detect malware, parse all disk images, or replace specialist tools. A hash is a fingerprint of bytes at a point in time, not independent proof of authorship or authenticity.
+- **Cases stays simple.** Keep the familiar archive-first Case Files page. Avoid duplicating its job with extra dashboards or a second permanent detail pane.
+- **Case context remains visible.** The Lab should show the active case and its identifier without making the user open a dropdown to discover the current context.
+- **Prefer visible choices over hidden menus.** Use compact, readable lists and explicit filter chips when there are only a few choices; make selected states unmistakable.
+- **One analysis bench, clear hierarchy.** Use a navigation/results region and a selected-record viewer. Keep common actions close to the record they affect, and avoid crowded toolbars.
+- **Separate evidence, results, and conclusions.** Distinguish original file metadata and hashes from derived observations, experiment methods, findings, and analyst conclusions.
+- **Preserve provenance.** Link evidence and analytical records back to the owning case. Record meaningful changes in the audit log and timeline.
+- **Read-only by default.** Inspection should not execute source files or modify evidence. Actions that change records should be explicit and auditable.
+- **No destructive rebuild.** Reuse the existing MariaDB case, experiment, observation, evidence, relationship, audit, and timeline data unless a separately reviewed migration is genuinely required.
+- **Do not overstate forensic capabilities.** The new UI should not claim automatic malware detection, full disk-image parsing, or specialist-suite parity unless those features are really implemented and validated.
 
 ## Data and validation
 
-The current redesign reuses GHOST's existing case, experiment, observation, evidence, relationship, audit, and timeline entities. It does not require a destructive database reset or new schema columns.
+The fresh implementation should reuse GHOST's existing case, experiment, observation, evidence, relationship, audit, and timeline entities. Removing the old pages did not delete stored rows, source files, or vault files. Avoid a destructive database reset or new schema columns unless a separate reviewed change requires them.
 
 Build validation should be followed by a manual pass against an existing MariaDB database: no cases; one case with multiple experiments; Draft and Completed experiments; no linked evidence; one and several evidence items; archived evidence; observation creation; searching and changing chips; and confirming that existing records persist after closing and reopening the app.
