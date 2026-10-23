@@ -10,7 +10,7 @@
     <Window.Resources>
         <DataTemplate x:Key="RecentCaseTemplate">
             <Border Margin="1,3" Padding="9"
-                    Background="#0B1610" BorderBrush="#1F3A29"
+                    Background="#0A1016" BorderBrush="#1E2B36"
                     BorderThickness="1" CornerRadius="8" MinHeight="64">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -24,12 +24,12 @@
                     </Grid.RowDefinitions>
 
                     <Border Grid.RowSpan="2" Width="74" Padding="6,7"
-                            Background="#11271A" BorderBrush="#285338"
+                            Background="#12242D" BorderBrush="#2A4B55"
                             BorderThickness="1" CornerRadius="6"
                             VerticalAlignment="Stretch" Margin="0,0,10,0">
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="CASE FILE" FontSize="7"
-                                       Foreground="#71977D"
+                                       Foreground="#8195A1"
                                        HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding CaseNumber}" FontSize="10"
                                        FontWeight="SemiBold" Foreground="{StaticResource NeonBrush}"
@@ -47,20 +47,20 @@
                                 Orientation="Horizontal" Margin="0,6,0,0"
                                 VerticalAlignment="Center">
                         <TextBlock Text="CREATED" FontSize="7"
-                                   Foreground="#64816E" VerticalAlignment="Center" />
+                                   Foreground="#80929F" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding CreatedAt}" FontSize="8"
-                                   Foreground="#A6BEAD" Margin="7,0,0,0"
+                                   Foreground="#B2C0CD" Margin="7,0,0,0"
                                    VerticalAlignment="Center" />
                     </StackPanel>
 
                     <Border Grid.Column="2" Grid.RowSpan="2"
-                            Background="#14291A" BorderBrush="#28563A"
+                            Background="#13242D" BorderBrush="#2A4B55"
                             BorderThickness="1" CornerRadius="5"
                             Padding="9,6" VerticalAlignment="Center"
                             Margin="10,0,0,0">
                         <StackPanel>
                             <TextBlock Text="STATUS" FontSize="7"
-                                       Foreground="#71977D"
+                                       Foreground="#8195A1"
                                        HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding Status}" FontSize="9"
                                        FontWeight="SemiBold" Foreground="{StaticResource NeonBrush}"
@@ -94,12 +94,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="SelectionChrome" Property="BorderBrush" Value="#376747" />
-                                <Setter TargetName="SelectionChrome" Property="Background" Value="#0D1D13" />
+                                <Setter TargetName="SelectionChrome" Property="BorderBrush" Value="#36545F" />
+                                <Setter TargetName="SelectionChrome" Property="Background" Value="#101A22" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="SelectionChrome" Property="BorderBrush" Value="#63FFA0" />
-                                <Setter TargetName="SelectionChrome" Property="Background" Value="#11271A" />
+                                <Setter TargetName="SelectionChrome" Property="Background" Value="#12242D" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.55" />
@@ -128,7 +128,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Width="42" Height="42" CornerRadius="10"
-                                Background="#13271B" BorderBrush="#3C8658"
+                                Background="#121F28" BorderBrush="#3F7077"
                                 BorderThickness="1" VerticalAlignment="Center">
                             <Grid>
                                 <Ellipse Width="27" Height="27" Stroke="{StaticResource NeonBrush}"
@@ -145,7 +145,7 @@
                         </StackPanel>
                     </Grid>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,22,0,18" />
-                    <Border Background="#101C14" BorderBrush="#254332" BorderThickness="1"
+                    <Border Background="#101720" BorderBrush="#283943" BorderThickness="1"
                             CornerRadius="6" Padding="10,8">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Ellipse Width="7" Height="7" Fill="{StaticResource NeonBrush}"
@@ -162,7 +162,7 @@
 
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,18,0,0">
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,0,0,14" />
-                    <Border Background="#101812" BorderBrush="{StaticResource LineBrush}"
+                    <Border Background="#10171F" BorderBrush="{StaticResource LineBrush}"
                             BorderThickness="1" CornerRadius="8" Padding="12">
                         <StackPanel>
                             <TextBlock Text="WORKSTATION STATUS" FontSize="9"
@@ -195,7 +195,7 @@
                         <TextBlock Text="WORKSPACE" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                    Margin="5,0,0,8" />
                         <Button x:Name="NavDashboard" Style="{StaticResource NavButtonStyle}"
-                                Content="▦   COMMAND CENTER" Click="Dashboard_Click" />
+                                Content="▦   DASHBOARD" Click="Dashboard_Click" />
                         <Button x:Name="NavCases" Style="{StaticResource NavButtonStyle}"
                                 Content="▤   CASE FILES" Click="Cases_Click" />
                         <Button x:Name="NavDigitalLab" Style="{StaticResource NavButtonStyle}"
@@ -259,7 +259,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Width="28" Height="30" CornerRadius="6"
-                                    Background="#14291A" BorderBrush="#28583A"
+                                    Background="#13242D" BorderBrush="#28583A"
                                     BorderThickness="1" VerticalAlignment="Center">
                                 <TextBlock Text="◷" FontSize="20" Foreground="#63FFA0"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -641,12 +641,12 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="CASE ACTIVITY / LATEST RECORDS" FontSize="7"
-                                           Foreground="#6F9B7B" />
+                                           Foreground="#879AA8" />
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
                                             VerticalAlignment="Center">
                                     <TextBlock Text="RECENT CASE FILES" FontSize="12"
                                                FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
-                                    <Border Background="#14291A" BorderBrush="#28563A"
+                                    <Border Background="#13242D" BorderBrush="#2A4B55"
                                             BorderThickness="1" CornerRadius="4"
                                             Padding="5,2" Margin="9,0,0,0">
                                         <TextBlock Text="LATEST 4" FontSize="7"
@@ -684,7 +684,7 @@
                                            Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center" />
                                 <TextBlock Text="Create an investigation to populate this space."
-                                           FontSize="8" Foreground="#607768" Margin="0,6,0,0"
+                                           FontSize="8" Foreground="#788A97" Margin="0,6,0,0"
                                            HorizontalAlignment="Center" />
                             </StackPanel>
                         </Grid>
@@ -693,10 +693,10 @@
 
                 <!-- GHOST SHELL: compact native PowerShell console with shared command history -->
                 <Border Grid.Row="1" Grid.Column="1"
-                        Background="#050906" BorderBrush="#296A3E" BorderThickness="1"
+                        Background="#030609" BorderBrush="#25505A" BorderThickness="1"
                         CornerRadius="8" Padding="0" ClipToBounds="True">
                     <Border.Effect>
-                        <DropShadowEffect Color="#39FF81" BlurRadius="16"
+                        <DropShadowEffect Color="#43CFE0" BlurRadius="16"
                                           ShadowDepth="0" Opacity="0.12" />
                     </Border.Effect>
                     <Grid>
@@ -733,7 +733,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal"
                                             VerticalAlignment="Center">
-                                    <Border Background="#14291A" BorderBrush="#28563A"
+                                    <Border Background="#13242D" BorderBrush="#2A4B55"
                                             BorderThickness="1" CornerRadius="3" Padding="6,3"
                                             VerticalAlignment="Center">
                                         <TextBlock x:Name="DashboardConsoleStatusText" Text="STARTING"
@@ -741,7 +741,7 @@
                                     </Border>
                                     <Button Content="↻ RESTART" Click="DashboardConsoleRestart_Click"
                                             Padding="6,3" FontSize="7" Margin="5,0,0,0"
-                                            Background="#14291A" BorderBrush="#34764B"
+                                            Background="#13242D" BorderBrush="#34764B"
                                             Foreground="#B5FFC8" />
                                 </StackPanel>
                             </Grid>
@@ -779,7 +779,7 @@
                         </Border>
 
                         <!-- Scrollable command history over a subtle technical grid -->
-                        <Grid Grid.Row="2" Background="#050906">
+                        <Grid Grid.Row="2" Background="#030609">
                             <Border Background="{StaticResource DotGridBrush}"
                                     Opacity="0.11" IsHitTestVisible="False" />
                             <ScrollViewer x:Name="DashboardConsoleScrollViewer"
@@ -806,7 +806,7 @@
                                            Margin="0,0,8,0" />
                                 <TextBox x:Name="DashboardConsoleInput" Grid.Column="1"
                                          Height="28" Padding="7,4"
-                                         Background="#050906" BorderBrush="#25472E"
+                                         Background="#030609" BorderBrush="#25472E"
                                          BorderThickness="1" Foreground="#C8F8D4"
                                          CaretBrush="#63FFA0" FontSize="9"
                                          VerticalContentAlignment="Center"
@@ -815,7 +815,7 @@
                                 <Button Grid.Column="2" Content="RUN  ↵"
                                         Click="DashboardConsoleRun_Click"
                                         Padding="8,5" FontSize="8"
-                                        Margin="6,0,0,0" Background="#14291A"
+                                        Margin="6,0,0,0" Background="#13242D"
                                         BorderBrush="#2C6840" Foreground="#8FFFB1" />
                             </Grid>
                         </Border>
@@ -897,7 +897,7 @@
                 <Button Content="↻ REFRESH" Click="Refresh_Click" Margin="0,0,8,0" />
                 <Button x:Name="NewRelationshipButton" Content="+ CREATE CONNECTION"
                         Click="NewRelationship_Click" Margin="0,0,8,0" />
-                <Button Content="← COMMAND CENTER" Click="Dashboard_Click" />
+                <Button Content="← DASHBOARD" Click="Dashboard_Click" />
             </StackPanel>
         </Grid>
 
