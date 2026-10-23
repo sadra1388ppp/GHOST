@@ -60,8 +60,8 @@ Acceptance: the app never edits the original file; an import is traceable; re-ve
 - [x] Record experiment/observation changes in audit history and create timeline events
 - [x] Show saved experiments and observations in the Investigation Network
 - [ ] Record tools and start/end timestamps
-- [ ] Associate evidence files with experiments
-- [ ] Add safe, deterministic utilities: SHA-256, file metadata, text/log viewing, and structured notes
+- [x] Associate evidence files with experiments through auditable case-scoped relationships
+- [x] Add safe, deterministic utilities: SHA-256, file metadata, and bounded text/log preview; save findings as structured observations
 - [ ] Never execute untrusted evidence or arbitrary shell commands as a default action
 
 Acceptance: every experiment and observation is persisted, searchable, tied to a case when applicable, and represented accurately in linked records.
