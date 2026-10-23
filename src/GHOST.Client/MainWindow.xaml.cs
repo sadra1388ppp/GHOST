@@ -4250,9 +4250,9 @@ public partial class MainWindow : Window
                 db.SaveChanges();
                 transaction.Commit();
 
-                footerStatus.Text = "Observation saved. The case timeline and audit history were updated.";
                 RefreshMetricsAndArchive();
                 RefreshNetwork();
+                footerStatus.Text = "Observation saved. The case timeline and audit history were updated.";
                 return true;
             }
             catch (Exception ex)
@@ -4505,7 +4505,7 @@ public partial class MainWindow : Window
                 db.SaveChanges();
                 db.AuditLogs.Add(new AuditEntry
                 {
-                    EntityType = "EvidenceRelationship",
+                    EntityType = "Relationship",
                     EntityId = link.Id,
                     Action = "Created",
                     Details = $"Evidence '{evidenceItem.Title}' linked to experiment '{experiment.Title}'."
