@@ -3457,45 +3457,111 @@ public partial class MainWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
-        header.Children.Add(new TextBlock
+        var header = new Border
         {
-            Text = "DIGITAL LAB",
-            FontSize = 23,
+            Margin = new Thickness(0, 0, 0, 14),
+            Background = (Brush)FindResource("HeroBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(18, 15, 18, 15)
+        };
+        var headerLayout = new Grid();
+        headerLayout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        headerLayout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var headerCopy = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        headerCopy.Children.Add(new TextBlock
+        {
+            Text = "GHOST  /  FORENSIC WORKSPACE",
+            FontSize = 9,
             FontWeight = FontWeights.SemiBold,
-            Foreground = (Brush)FindResource("NeonBrush")
+            Foreground = (Brush)FindResource("CyanBrush")
         });
-        header.Children.Add(new TextBlock
+        headerCopy.Children.Add(new TextBlock
         {
-            Text = "A clear workspace for repeatable analysis, recorded findings, and case-linked evidence.",
-            FontSize = 11,
+            Text = "Digital Lab",
+            FontSize = 25,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        headerCopy.Children.Add(new TextBlock
+        {
+            Text = "Repeatable analysis. Traceable observations. Case-linked evidence.",
+            FontSize = 10,
             Foreground = (Brush)FindResource("MutedBrush"),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 5, 0, 0)
         });
+        headerLayout.Children.Add(headerCopy);
+
+        var labStatus = new Border
+        {
+            Background = (Brush)FindResource("DotGridBrush"),
+            BorderBrush = (Brush)FindResource("NeonBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(14, 10, 14, 10),
+            Margin = new Thickness(18, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var labStatusContent = new StackPanel();
+        labStatusContent.Children.Add(new TextBlock
+        {
+            Text = "●  LAB WORKSPACE",
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush")
+        });
+        labStatusContent.Children.Add(new TextBlock
+        {
+            Text = "LOCAL  •  CASE-BOUND",
+            FontSize = 8,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        labStatus.Child = labStatusContent;
+        Grid.SetColumn(labStatus, 1);
+        headerLayout.Children.Add(labStatus);
+        header.Child = headerLayout;
+
         Grid.SetRow(header, 0);
         root.Children.Add(header);
 
         var casePicker = new ComboBox
         {
-            Height = 34,
-            Width = 330,
+            Height = 36,
+            Width = 315,
+            MaxDropDownHeight = 360,
             DisplayMemberPath = nameof(LabCaseOption.DisplayText),
-            ToolTip = "Choose the investigation whose experiments you want to work with"
+            ToolTip = "Select an investigation to filter its experiments, observations, and available Evidence Vault items"
         };
         var searchBox = new TextBox
         {
-            Height = 34,
-            Width = 230,
-            ToolTip = "Search experiment title, category, objective, method, or result",
+            Height = 36,
+            Width = 215,
+            ToolTip = "Search titles, objectives, methods, categories, and conclusions",
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        var categoryFilter = new ComboBox { Height = 34, Width = 155, ToolTip = "Filter by analysis category" };
+        var categoryFilter = new ComboBox
+        {
+            Height = 36,
+            Width = 175,
+            MaxDropDownHeight = 300,
+            ToolTip = "Show every category or narrow the archive to one analysis type"
+        };
         foreach (var category in new[] { "All categories", "File Analysis", "Log Analysis", "Network Analysis", "Scientific", "Other" })
             categoryFilter.Items.Add(category);
         categoryFilter.SelectedIndex = 0;
 
-        var statusFilter = new ComboBox { Height = 34, Width = 135, ToolTip = "Filter by experiment status" };
+        var statusFilter = new ComboBox
+        {
+            Height = 36,
+            Width = 145,
+            MaxDropDownHeight = 240,
+            ToolTip = "Show all experiments, drafts, or completed experiments"
+        };
         foreach (var item in new[] { "All statuses", "Draft", "Completed" })
             statusFilter.Items.Add(item);
         statusFilter.SelectedIndex = 0;
@@ -3510,11 +3576,47 @@ public partial class MainWindow : Window
 
         var toolbarFields = new WrapPanel { VerticalAlignment = VerticalAlignment.Bottom };
         toolbarFields.Children.Add(MakeToolbarField("INVESTIGATION", casePicker));
-        toolbarFields.Children.Add(MakeToolbarField("SEARCH", searchBox));
-        toolbarFields.Children.Add(MakeToolbarField("CATEGORY", categoryFilter));
-        toolbarFields.Children.Add(MakeToolbarField("STATUS", statusFilter));
-        var toolbarCard = CreateModuleCard(toolbarFields, new Thickness(0, 0, 0, 12));
-        toolbarCard.Padding = new Thickness(12, 6, 12, 12);
+        toolbarFields.Children.Add(MakeToolbarField("SEARCH ARCHIVE", searchBox));
+        toolbarFields.Children.Add(MakeToolbarField("ANALYSIS CATEGORY", categoryFilter));
+        toolbarFields.Children.Add(MakeToolbarField("EXPERIMENT STATUS", statusFilter));
+
+        var caseContextText = new TextBlock
+        {
+            Text = "Loading investigation context…",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var openCasesButton = new Button
+        {
+            Content = "MANAGE CASES  ↗",
+            MinWidth = 135,
+            MinHeight = 32,
+            Margin = new Thickness(10, 0, 0, 0),
+            Padding = new Thickness(10, 7, 10, 7),
+            ToolTip = "Open Case Files to create or manage investigations"
+        };
+        var caseContextRow = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(openCasesButton, Dock.Right);
+        caseContextRow.Children.Add(openCasesButton);
+        caseContextRow.Children.Add(caseContextText);
+        var caseContextBorder = new Border
+        {
+            Background = (Brush)FindResource("PanelBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(2, 10, 2, 0),
+            Margin = new Thickness(0, 10, 0, 0),
+            Child = caseContextRow
+        };
+
+        var toolbarContent = new StackPanel();
+        toolbarContent.Children.Add(toolbarFields);
+        toolbarContent.Children.Add(caseContextBorder);
+        var toolbarCard = CreateModuleCard(toolbarContent, new Thickness(0, 0, 0, 12));
+        toolbarCard.Padding = new Thickness(14, 10, 14, 12);
+        openCasesButton.Click += (_, _) => Cases_Click(this, new RoutedEventArgs());
         Grid.SetRow(toolbarCard, 1);
         root.Children.Add(toolbarCard);
 
@@ -3564,31 +3666,84 @@ public partial class MainWindow : Window
         root.Children.Add(workspace);
 
         var leftDock = new DockPanel { LastChildFill = true };
-        var archiveHeader = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
-        archiveHeader.Children.Add(new TextBlock
+        var archiveHeader = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+        archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var archiveHeading = new StackPanel();
+        archiveHeading.Children.Add(new TextBlock
         {
             Text = "EXPERIMENT ARCHIVE",
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = (Brush)FindResource("CyanBrush")
         });
-        archiveHeader.Children.Add(new TextBlock
+        archiveHeading.Children.Add(new TextBlock
         {
-            Text = "Select a record to inspect its method, results, and observations.",
+            Text = "Select a record to review its method, findings, and observations.",
             FontSize = 9,
             Foreground = (Brush)FindResource("MutedBrush"),
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 0)
+            Margin = new Thickness(0, 5, 8, 0)
         });
+        var archiveCountText = new TextBlock
+        {
+            Text = "0 SHOWN  /  0 TOTAL",
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 7, 0, 0)
+        };
+        archiveHeading.Children.Add(archiveCountText);
+        archiveHeader.Children.Add(archiveHeading);
+
+        var clearFiltersButton = new Button
+        {
+            Content = "RESET FILTERS",
+            MinHeight = 29,
+            Padding = new Thickness(8, 5, 8, 5),
+            FontSize = 9,
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Top,
+            ToolTip = "Clear search and return to all experiments in this investigation"
+        };
+        clearFiltersButton.Click += (_, _) =>
+        {
+            searchBox.Clear();
+            categoryFilter.SelectedIndex = 0;
+            statusFilter.SelectedIndex = 0;
+        };
+        Grid.SetColumn(clearFiltersButton, 1);
+        archiveHeader.Children.Add(clearFiltersButton);
         DockPanel.SetDock(archiveHeader, Dock.Top);
         leftDock.Children.Add(archiveHeader);
 
+        var createHeader = new StackPanel { Orientation = Orientation.Horizontal };
+        createHeader.Children.Add(new TextBlock
+        {
+            Text = "＋",
+            FontSize = 14,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 0, 8, 0)
+        });
+        createHeader.Children.Add(new TextBlock
+        {
+            Text = "NEW EXPERIMENT",
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            VerticalAlignment = VerticalAlignment.Center
+        });
         var createExpander = new Expander
         {
-            Header = "＋  Create an experiment",
+            Header = createHeader,
             IsExpanded = false,
             Margin = new Thickness(0, 0, 0, 10),
-            ToolTip = "Start a new experiment linked to the selected case"
+            Background = (Brush)FindResource("PanelAltBrush"),
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            ToolTip = "Start a new experiment linked to the active investigation"
         };
         var createForm = new StackPanel();
         var titleBox = new TextBox
@@ -3642,54 +3797,110 @@ public partial class MainWindow : Window
 
         var experimentList = new ListView
         {
-            Background = (Brush)FindResource("PanelBrush"),
+            Background = Brushes.Transparent,
             Foreground = (Brush)FindResource("TextBrush"),
-            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderBrush = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
             FontFamily = new FontFamily("Segoe UI"),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            SelectionMode = SelectionMode.Single
+            SelectionMode = SelectionMode.Single,
+            Padding = new Thickness(0)
         };
 
         var experimentTemplate = new DataTemplate(typeof(ExperimentArchiveRow));
+        var archiveItemCard = new FrameworkElementFactory(typeof(Border));
+        archiveItemCard.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+        archiveItemCard.SetValue(Border.BorderBrushProperty, FindResource("LineBrush"));
+        archiveItemCard.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        archiveItemCard.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        archiveItemCard.SetValue(Border.PaddingProperty, new Thickness(10, 9, 10, 9));
+
         var experimentItemStack = new FrameworkElementFactory(typeof(StackPanel));
         var experimentTitleItem = new FrameworkElementFactory(typeof(TextBlock));
         experimentTitleItem.SetBinding(TextBlock.TextProperty, new Binding(nameof(ExperimentArchiveRow.Title)));
         experimentTitleItem.SetValue(TextBlock.FontSizeProperty, 12d);
         experimentTitleItem.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
         experimentTitleItem.SetValue(TextBlock.ForegroundProperty, FindResource("TextBrush"));
+        experimentTitleItem.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
         experimentItemStack.AppendChild(experimentTitleItem);
+
         var experimentMetaItem = new FrameworkElementFactory(typeof(TextBlock));
         experimentMetaItem.SetBinding(TextBlock.TextProperty, new Binding(nameof(ExperimentArchiveRow.MetaText)));
         experimentMetaItem.SetValue(TextBlock.FontSizeProperty, 9d);
-        experimentMetaItem.SetValue(TextBlock.ForegroundProperty, FindResource("MutedBrush"));
+        experimentMetaItem.SetValue(TextBlock.ForegroundProperty, FindResource("CyanBrush"));
         experimentMetaItem.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
-        experimentMetaItem.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 3, 0, 0));
+        experimentMetaItem.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 4, 0, 0));
         experimentItemStack.AppendChild(experimentMetaItem);
-        experimentTemplate.VisualTree = experimentItemStack;
+
+        var experimentObjectiveItem = new FrameworkElementFactory(typeof(TextBlock));
+        experimentObjectiveItem.SetBinding(TextBlock.TextProperty, new Binding(nameof(ExperimentArchiveRow.ObjectivePreview)));
+        experimentObjectiveItem.SetValue(TextBlock.FontSizeProperty, 9d);
+        experimentObjectiveItem.SetValue(TextBlock.ForegroundProperty, FindResource("MutedBrush"));
+        experimentObjectiveItem.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+        experimentObjectiveItem.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 5, 0, 0));
+        experimentObjectiveItem.SetValue(FrameworkElement.MaxHeightProperty, 30d);
+        experimentItemStack.AppendChild(experimentObjectiveItem);
+
+        archiveItemCard.AppendChild(experimentItemStack);
+        experimentTemplate.VisualTree = archiveItemCard;
         experimentList.ItemTemplate = experimentTemplate;
 
-        var listItemStyle = new Style(typeof(ListViewItem));
-        listItemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(9, 8, 9, 8)));
-        listItemStyle.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 0, 4)));
-        listItemStyle.Setters.Add(new Setter(Control.ForegroundProperty, FindResource("TextBrush")));
+        var listItemStyle = new Style(
+            typeof(ListViewItem),
+            (Style)FindResource(typeof(ListViewItem)));
+        listItemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+        listItemStyle.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 0, 6)));
+        listItemStyle.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
+        listItemStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
         experimentList.ItemContainerStyle = listItemStyle;
 
         var experimentListHost = new Grid();
         experimentListHost.Children.Add(experimentList);
-        var emptyExperiments = new TextBlock
+        var emptyExperiments = new StackPanel
         {
-            Text = "No experiments match this view.\nCreate one above or change the search and filters.",
-            FontSize = 11,
-            Foreground = (Brush)FindResource("MutedBrush"),
-            TextWrapping = TextWrapping.Wrap,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            TextAlignment = TextAlignment.Center,
-            Margin = new Thickness(18),
+            Margin = new Thickness(22),
             IsHitTestVisible = false
         };
+        emptyExperiments.Children.Add(new TextBlock
+        {
+            Text = "⌕",
+            FontSize = 30,
+            FontFamily = new FontFamily("Segoe UI Symbol"),
+            Foreground = (Brush)FindResource("CyanBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        emptyExperiments.Children.Add(new TextBlock
+        {
+            Text = "NO EXPERIMENTS TO DISPLAY",
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            Margin = new Thickness(0, 8, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        emptyExperiments.Children.Add(new TextBlock
+        {
+            Text = "Create an experiment or reset the search and filters.\nRecords are scoped to the selected investigation.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(0, 5, 0, 0),
+            MaxWidth = 250
+        });
         experimentListHost.Children.Add(emptyExperiments);
-        leftDock.Children.Add(experimentListHost);
+        var experimentListFrame = new Border
+        {
+            Background = (Brush)FindResource("PanelAltBrush"),
+            BorderBrush = (Brush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(6),
+            Child = experimentListHost
+        };
+        leftDock.Children.Add(experimentListFrame);
 
         var leftCard = CreateModuleCard(leftDock, new Thickness(0, 0, 10, 0));
         leftCard.Padding = new Thickness(14);
@@ -4010,6 +4221,26 @@ public partial class MainWindow : Window
         string? analyzedTextPreview = null;
         bool isRefreshingExperimentList = false;
 
+        void RefreshInvestigationContext()
+        {
+            if (casePicker.SelectedItem is LabCaseOption selectedCase)
+            {
+                caseContextText.Text =
+                    $"ACTIVE INVESTIGATION  •  {selectedCase.CaseNumber}  /  {selectedCase.Title}";
+                caseContextText.Foreground = (Brush)FindResource("TextBrush");
+                openCasesButton.Content = "MANAGE CASES  ↗";
+                openCasesButton.ToolTip = "Open Case Files to review or manage investigations";
+            }
+            else
+            {
+                caseContextText.Text =
+                    "NO ACTIVE INVESTIGATION  •  Create or select a case before recording experiments.";
+                caseContextText.Foreground = (Brush)FindResource("AmberBrush");
+                openCasesButton.Content = "OPEN CASE FILES  ↗";
+                openCasesButton.ToolTip = "Open Case Files to create your first investigation";
+            }
+        }
+
         void RefreshMetricsAndArchive()
         {
             try
@@ -4065,6 +4296,7 @@ public partial class MainWindow : Window
                     : filtered.FirstOrDefault();
                 isRefreshingExperimentList = false;
 
+                archiveCountText.Text = $"{filtered.Count} SHOWN  /  {entities.Count} TOTAL";
                 emptyExperiments.Visibility = filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
                 footerStatus.Text = selectedCaseId.HasValue
                     ? $"{filtered.Count} of {entities.Count} experiment(s) shown for the selected case."
@@ -4276,11 +4508,13 @@ public partial class MainWindow : Window
                 : cases.FirstOrDefault();
         }
 
+        RefreshInvestigationContext();
         casePicker.SelectionChanged += (_, _) =>
         {
             if (!ReferenceEquals(_activeModuleContent, root))
                 return;
             _selectedCaseId = (casePicker.SelectedItem as LabCaseOption)?.Id;
+            RefreshInvestigationContext();
             RefreshEvidencePicker();
             RefreshMetricsAndArchive();
         };
@@ -5433,7 +5667,18 @@ public partial class MainWindow : Window
         string SearchText)
     {
         public string MetaText =>
-            $"{Category}  •  {Status}  •  {CreatedAt}  •  {ObservationCount} observation(s)";
+            $"{Category}  •  {Status.ToUpperInvariant()}  •  {CreatedAt}  •  {ObservationCount} observation(s)";
+
+        public string ObjectivePreview
+        {
+            get
+            {
+                var objective = Hypothesis?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(objective))
+                    return "No objective or question recorded yet.";
+                return objective.Length > 110 ? objective[..107] + "…" : objective;
+            }
+        }
     }
 
     private sealed record ObservationArchiveRow(
