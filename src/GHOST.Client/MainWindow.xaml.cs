@@ -137,7 +137,7 @@ public partial class MainWindow : Window
 
         var backButton = new Button
         {
-            Content = "← COMMAND CENTER",
+            Content = "← DASHBOARD",
             Padding = new Thickness(12, 8, 12, 8),
             Margin = new Thickness(12, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center
@@ -169,10 +169,10 @@ public partial class MainWindow : Window
         {
             var selected = item.Key == active;
             item.Control.Background = selected
-                ? new SolidColorBrush(Color.FromRgb(19, 51, 31))
+                ? new SolidColorBrush(Color.FromRgb(18, 38, 47))
                 : Brushes.Transparent;
             item.Control.BorderBrush = selected
-                ? new SolidColorBrush(Color.FromRgb(70, 150, 95))
+                ? new SolidColorBrush(Color.FromRgb(54, 112, 124))
                 : Brushes.Transparent;
             item.Control.Foreground = selected
                 ? (Brush)FindResource("NeonBrush")
@@ -1294,7 +1294,7 @@ public partial class MainWindow : Window
         DashboardView.Visibility = Visibility.Visible;
         PageEyebrow.Text = "PRIVATE INVESTIGATION WORKSPACE";
         PageEyebrow.Visibility = Visibility.Collapsed;
-        PageTitle.Text = "Command Center";
+        PageTitle.Text = "Dashboard";
         RefreshStats();
     }
 
@@ -1758,105 +1758,506 @@ public partial class MainWindow : Window
 
     private void Cases_Click(object sender, RoutedEventArgs e)
     {
-        var panel = new DockPanel { Margin = new Thickness(20) };
-        var headingPanel = new Grid { Margin = new Thickness(0, 0, 0, 14) };
-        headingPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        headingPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var headingText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        headingText.Children.Add(new TextBlock
+        PageTitle.Text = "CASE FILES";
+
+        var root = new Grid { Margin = new Thickness(18, 16, 18, 16) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        // Page header: clear purpose, concise context, and a primary action.
+        var header = new Grid { Margin = new Thickness(0, 0, 0, 13) };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var headerCopy = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        headerCopy.Children.Add(new TextBlock
         {
-            Text = "CASE FILES // LOCAL ARCHIVE",
-            FontSize = 20,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = (Brush)FindResource("NeonBrush")
-        });
-        headingText.Children.Add(new TextBlock
-        {
-            Text = "Search, update, and work through your investigations from one place.",
+            Text = "INVESTIGATION MANAGEMENT",
             FontSize = 9,
-            Foreground = (Brush)FindResource("MutedBrush"),
-            Margin = new Thickness(0, 5, 0, 0)
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("CyanBrush")
         });
-        headingPanel.Children.Add(headingText);
+        headerCopy.Children.Add(new TextBlock
+        {
+            Text = "Case Files",
+            FontSize = 25,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+        headerCopy.Children.Add(new TextBlock
+        {
+            Text = "Search the archive, review case context, and move directly into an investigation.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 12, 0)
+        });
+        header.Children.Add(headerCopy);
+
         var newCaseButton = new Button
         {
-            Content = "＋ NEW CASE",
-            MinWidth = 126,
-            Height = 36,
-            Padding = new Thickness(12, 7, 12, 7),
-            Margin = new Thickness(16, 0, 0, 0),
+            Content = "＋  NEW CASE",
+            MinWidth = 132,
+            MinHeight = 38,
+            Padding = new Thickness(14, 8, 14, 8),
+            Margin = new Thickness(12, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center
         };
         newCaseButton.Click += (_, _) => NewCase_Click(this, new RoutedEventArgs());
         Grid.SetColumn(newCaseButton, 1);
-        headingPanel.Children.Add(newCaseButton);
-        DockPanel.SetDock(headingPanel, Dock.Top);
-        panel.Children.Add(headingPanel);
+        header.Children.Add(newCaseButton);
+        Grid.SetRow(header, 0);
+        root.Children.Add(header);
 
-        var search = new TextBox
+        var summaryPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 11) };
+        var openMetric = CreateMetricCard("OPEN CASES", "—", "Investigations in progress");
+        var closedMetric = CreateMetricCard("CLOSED CASES", "—", "Marked complete or inactive");
+        var totalMetric = CreateMetricCard("ALL CASES", "—", "Records in the local archive");
+        var evidenceMetric = CreateMetricCard("ACTIVE EVIDENCE", "—", "Non-archived vault items");
+        summaryPanel.Children.Add(openMetric);
+        summaryPanel.Children.Add(closedMetric);
+        summaryPanel.Children.Add(totalMetric);
+        summaryPanel.Children.Add(evidenceMetric);
+        Grid.SetRow(summaryPanel, 1);
+        root.Children.Add(summaryPanel);
+
+        var searchBox = new TextBox
         {
             Height = 36,
-            Margin = new Thickness(0, 0, 0, 10),
-            ToolTip = "Search by case number, title, or status"
+            MinWidth = 170,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            ToolTip = "Search case number, title, description, or status"
         };
-        DockPanel.SetDock(search, Dock.Top);
-        panel.Children.Add(search);
+        var statusFilter = new ComboBox
+        {
+            Width = 155,
+            Height = 36,
+            Margin = new Thickness(9, 0, 0, 0),
+            ToolTip = "Filter the archive by case status"
+        };
+        statusFilter.Items.Add("All statuses");
+        statusFilter.Items.Add("Open");
+        statusFilter.Items.Add("Closed");
+        statusFilter.SelectedIndex = 0;
+
+        var filterBar = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+        filterBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        filterBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        filterBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        filterBar.Children.Add(searchBox);
+        Grid.SetColumn(statusFilter, 1);
+        filterBar.Children.Add(statusFilter);
+
+        var resetButton = new Button
+        {
+            Content = "RESET",
+            MinWidth = 78,
+            MinHeight = 36,
+            Margin = new Thickness(9, 0, 0, 0),
+            Padding = new Thickness(10, 7, 10, 7),
+            ToolTip = "Clear search and status filters"
+        };
+        resetButton.Click += (_, _) =>
+        {
+            searchBox.Clear();
+            statusFilter.SelectedIndex = 0;
+        };
+        Grid.SetColumn(resetButton, 2);
+        filterBar.Children.Add(resetButton);
+        Grid.SetRow(filterBar, 2);
+        root.Children.Add(filterBar);
+
+        var workspace = new Grid();
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.02, GridUnitType.Star) });
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.98, GridUnitType.Star) });
+        Grid.SetRow(workspace, 3);
+        root.Children.Add(workspace);
+
+        // Archive pane with readable, selectable case cards.
+        var archiveDock = new DockPanel { LastChildFill = true };
+        var archiveHeader = new StackPanel { Margin = new Thickness(0, 0, 0, 9) };
+        archiveHeader.Children.Add(new TextBlock
+        {
+            Text = "INVESTIGATION ARCHIVE",
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("CyanBrush")
+        });
+        var archiveCountText = new TextBlock
+        {
+            Text = "Loading cases…",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+        archiveHeader.Children.Add(archiveCountText);
+        DockPanel.SetDock(archiveHeader, Dock.Top);
+        archiveDock.Children.Add(archiveHeader);
 
         var list = new ListView
         {
-            Background = (Brush)FindResource("PanelBrush"),
-            Foreground = Brushes.White,
-            BorderBrush = (Brush)FindResource("LineBrush"),
+            Background = Brushes.Transparent,
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderBrush = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
             FontFamily = (FontFamily)FindResource("HackerFont"),
-            DisplayMemberPath = nameof(CaseArchiveRow.DisplayText)
-        };
-        list.MouseDoubleClick += (_, _) =>
-        {
-            if (list.SelectedItem is CaseArchiveRow selected)
-                OpenCaseWorkspace(selected.Id);
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            SelectionMode = SelectionMode.Single,
+            Padding = new Thickness(0)
         };
 
-        // Wire the search event only after both controls exist, because RefreshRows
-        // reads from both search and list.
-        search.TextChanged += (_, _) => RefreshRows();
+        var caseTemplate = new DataTemplate(typeof(CaseArchiveRow));
+        var caseCard = new FrameworkElementFactory(typeof(Border));
+        caseCard.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+        caseCard.SetValue(Border.BorderBrushProperty, FindResource("LineBrush"));
+        caseCard.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        caseCard.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+        caseCard.SetValue(Border.PaddingProperty, new Thickness(12, 10, 12, 10));
 
-        var footer = new StackPanel
+        var cardStack = new FrameworkElementFactory(typeof(StackPanel));
+        var topLine = new FrameworkElementFactory(typeof(DockPanel));
+        topLine.SetValue(DockPanel.LastChildFillProperty, true);
+
+        var caseStatus = new FrameworkElementFactory(typeof(TextBlock));
+        caseStatus.SetBinding(TextBlock.TextProperty, new Binding(nameof(CaseArchiveRow.Status)));
+        caseStatus.SetValue(TextBlock.FontSizeProperty, 9d);
+        caseStatus.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+        caseStatus.SetValue(TextBlock.ForegroundProperty, FindResource("NeonBrush"));
+        caseStatus.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+        caseStatus.SetValue(FrameworkElement.MarginProperty, new Thickness(12, 0, 0, 0));
+        caseStatus.SetValue(DockPanel.DockProperty, Dock.Right);
+        topLine.AppendChild(caseStatus);
+
+        var caseNumber = new FrameworkElementFactory(typeof(TextBlock));
+        caseNumber.SetBinding(TextBlock.TextProperty, new Binding(nameof(CaseArchiveRow.CaseNumber)));
+        caseNumber.SetValue(TextBlock.FontSizeProperty, 9d);
+        caseNumber.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+        caseNumber.SetValue(TextBlock.ForegroundProperty, FindResource("CyanBrush"));
+        caseNumber.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+        topLine.AppendChild(caseNumber);
+        cardStack.AppendChild(topLine);
+
+        var caseTitle = new FrameworkElementFactory(typeof(TextBlock));
+        caseTitle.SetBinding(TextBlock.TextProperty, new Binding(nameof(CaseArchiveRow.Title)));
+        caseTitle.SetValue(TextBlock.FontSizeProperty, 12d);
+        caseTitle.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+        caseTitle.SetValue(TextBlock.ForegroundProperty, FindResource("TextBrush"));
+        caseTitle.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+        caseTitle.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 6, 0, 0));
+        cardStack.AppendChild(caseTitle);
+
+        var caseMeta = new FrameworkElementFactory(typeof(TextBlock));
+        caseMeta.SetBinding(TextBlock.TextProperty, new Binding(nameof(CaseArchiveRow.CreatedAt)));
+        caseMeta.SetValue(TextBlock.FontSizeProperty, 9d);
+        caseMeta.SetValue(TextBlock.ForegroundProperty, FindResource("MutedBrush"));
+        caseMeta.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 5, 0, 0));
+        cardStack.AppendChild(caseMeta);
+
+        caseCard.AppendChild(cardStack);
+        caseTemplate.VisualTree = caseCard;
+        list.ItemTemplate = caseTemplate;
+
+        var caseItemStyle = new Style(typeof(ListViewItem), (Style)FindResource(typeof(ListViewItem)));
+        caseItemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+        caseItemStyle.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 0, 6)));
+        caseItemStyle.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
+        caseItemStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+        list.ItemContainerStyle = caseItemStyle;
+
+        var emptyHint = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 12, 0, 0)
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            Margin = new Thickness(18)
         };
-        var openCaseButton = new Button
+        emptyHint.Children.Add(new TextBlock
         {
-            Content = "OPEN / WORK ON CASE",
-            MinWidth = 190,
-            Margin = new Thickness(0, 0, 8, 0)
+            Text = "NO CASES MATCH",
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        emptyHint.Children.Add(new TextBlock
+        {
+            Text = "Create a case or adjust the search and filters.",
+            FontSize = 9,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            MaxWidth = 235,
+            Margin = new Thickness(0, 6, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        var listHost = new Grid();
+        listHost.Children.Add(list);
+        listHost.Children.Add(emptyHint);
+
+        var archiveCardContent = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(listHost, Dock.Bottom);
+        archiveCardContent.Children.Add(listHost);
+        archiveCardContent.Children.Add(archiveHeader);
+        var archiveCard = CreateModuleCard(archiveCardContent, new Thickness(0, 0, 9, 0));
+        archiveCard.Padding = new Thickness(13);
+        Grid.SetColumn(archiveCard, 0);
+        workspace.Children.Add(archiveCard);
+
+        // Case inspector: selected record, provenance context, linked-record totals, and actions.
+        var detailDock = new DockPanel { LastChildFill = true };
+        var actionBar = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+        var openButton = new Button
+        {
+            Content = "OPEN WORKSPACE",
+            MinWidth = 145,
+            MinHeight = 36,
+            Margin = new Thickness(0, 0, 8, 8),
+            IsEnabled = false
         };
-        openCaseButton.Click += (_, _) =>
+        var statusButton = new Button
+        {
+            Content = "CLOSE CASE",
+            MinWidth = 118,
+            MinHeight = 36,
+            Margin = new Thickness(0, 0, 8, 8),
+            IsEnabled = false
+        };
+        var deleteButton = new Button
+        {
+            Content = "DELETE",
+            MinWidth = 88,
+            MinHeight = 36,
+            Margin = new Thickness(0, 0, 8, 8),
+            IsEnabled = false,
+            Background = new SolidColorBrush(Color.FromRgb(45, 20, 27)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(111, 54, 66)),
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 160, 170))
+        };
+        actionBar.Children.Add(openButton);
+        actionBar.Children.Add(statusButton);
+        actionBar.Children.Add(deleteButton);
+        DockPanel.SetDock(actionBar, Dock.Bottom);
+        detailDock.Children.Add(actionBar);
+
+        var detailScroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var detailStack = new StackPanel { Margin = new Thickness(5, 4, 5, 8) };
+        detailStack.Children.Add(new TextBlock
+        {
+            Text = "CASE INSPECTOR",
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("CyanBrush")
+        });
+        var detailTitle = new TextBlock
+        {
+            Text = "Select a case",
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 6, 0, 0)
+        };
+        detailStack.Children.Add(detailTitle);
+        var detailNumber = new TextBlock
+        {
+            Text = "NO CASE SELECTED",
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("NeonBrush"),
+            Margin = new Thickness(0, 7, 0, 13)
+        };
+        detailStack.Children.Add(detailNumber);
+        detailStack.Children.Add(CreateFormLabel("DESCRIPTION"));
+        var detailDescription = new TextBlock
+        {
+            Text = "Select an investigation in the archive to inspect its description and linked records.",
+            FontSize = 11,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            LineHeight = 17,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        detailStack.Children.Add(detailDescription);
+        detailStack.Children.Add(CreateFormLabel("CASE METADATA"));
+        var detailMeta = new TextBlock
+        {
+            Text = "Created and updated timestamps will appear here.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        detailStack.Children.Add(detailMeta);
+        detailStack.Children.Add(CreateFormLabel("LINKED RECORDS"));
+        var detailCounts = new TextBlock
+        {
+            Text = "Evidence: —    Experiments: —    Timeline entries: —",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        detailStack.Children.Add(detailCounts);
+        detailStack.Children.Add(CreateFormLabel("LATEST CASE ACTIVITY"));
+        var detailActivity = new TextBlock
+        {
+            Text = "Timeline activity will appear when a case is selected.",
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            LineHeight = 16
+        };
+        detailStack.Children.Add(detailActivity);
+        detailScroll.Content = detailStack;
+        detailDock.Children.Add(detailScroll);
+
+        var detailsCard = CreateModuleCard(detailDock);
+        detailsCard.Padding = new Thickness(15);
+        detailsCard.Margin = new Thickness(9, 0, 0, 0);
+        Grid.SetColumn(detailsCard, 1);
+        workspace.Children.Add(detailsCard);
+
+        void RefreshSummary()
+        {
+            using var db = new GhostDbContext();
+            var openCount = db.Cases.Count(x => x.Status == "Open");
+            var closedCount = db.Cases.Count(x => x.Status == "Closed");
+            var totalCount = db.Cases.Count();
+            var evidenceCount = db.Evidence.Count(x => !x.IsArchived);
+            var values = new[]
+            {
+                (openMetric, openCount.ToString(CultureInfo.InvariantCulture)),
+                (closedMetric, closedCount.ToString(CultureInfo.InvariantCulture)),
+                (totalMetric, totalCount.ToString(CultureInfo.InvariantCulture)),
+                (evidenceMetric, evidenceCount.ToString(CultureInfo.InvariantCulture))
+            };
+            foreach (var (card, value) in values)
+            {
+                if (card.Child is StackPanel stack && stack.Children.Count > 1 && stack.Children[1] is TextBlock valueText)
+                    valueText.Text = value;
+            }
+        }
+
+        void UpdateSelectedCaseDetails()
+        {
+            var selected = list.SelectedItem as CaseArchiveRow;
+            openButton.IsEnabled = selected is not null;
+            statusButton.IsEnabled = selected is not null;
+            deleteButton.IsEnabled = selected is not null;
+
+            if (selected is null)
+            {
+                detailTitle.Text = "Select a case";
+                detailNumber.Text = "NO CASE SELECTED";
+                detailDescription.Text = "Select an investigation in the archive to inspect its description and linked records.";
+                detailMeta.Text = "Created and updated timestamps will appear here.";
+                detailCounts.Text = "Evidence: —    Experiments: —    Timeline entries: —";
+                detailActivity.Text = "Timeline activity will appear when a case is selected.";
+                statusButton.Content = "CLOSE CASE";
+                return;
+            }
+
+            try
+            {
+                using var db = new GhostDbContext();
+                var item = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == selected.Id);
+                if (item is null)
+                {
+                    detailActivity.Text = "This case is no longer present in the database. Refresh the archive.";
+                    return;
+                }
+
+                var evidenceCount = db.Evidence.Count(x => x.CaseFileId == item.Id && !x.IsArchived);
+                var experimentCount = db.Experiments.Count(x => x.CaseFileId == item.Id);
+                var timelineCount = db.TimelineEvents.Count(x => x.CaseFileId == item.Id);
+                var latestActivity = db.TimelineEvents.AsNoTracking()
+                    .Where(x => x.CaseFileId == item.Id)
+                    .OrderByDescending(x => x.OccurredAt)
+                    .Select(x => new { x.Title, x.OccurredAt })
+                    .FirstOrDefault();
+
+                detailTitle.Text = item.Title;
+                detailNumber.Text = $"{item.CaseNumber}   /   {item.Status.ToUpperInvariant()}";
+                detailDescription.Text = string.IsNullOrWhiteSpace(item.Description)
+                    ? "No description has been recorded for this case."
+                    : item.Description;
+                detailMeta.Text = $"Created {item.CreatedAt.ToLocalTime():dd MMM yyyy, HH:mm}    •    Updated {item.UpdatedAt.ToLocalTime():dd MMM yyyy, HH:mm}";
+                detailCounts.Text = $"Active evidence: {evidenceCount}    •    Experiments: {experimentCount}    •    Timeline entries: {timelineCount}";
+                detailActivity.Text = latestActivity is null
+                    ? "No timeline activity has been recorded for this case yet."
+                    : $"{latestActivity.OccurredAt.ToLocalTime():dd MMM yyyy, HH:mm}   •   {latestActivity.Title}";
+                statusButton.Content = string.Equals(item.Status, "Closed", StringComparison.OrdinalIgnoreCase)
+                    ? "REOPEN CASE"
+                    : "CLOSE CASE";
+            }
+            catch (Exception ex)
+            {
+                detailActivity.Text = $"Case details could not be loaded: {ex.Message}";
+            }
+        }
+
+        void RefreshRows()
+        {
+            try
+            {
+                var term = searchBox.Text.Trim();
+                var status = statusFilter.SelectedItem?.ToString() ?? "All statuses";
+                using var db = new GhostDbContext();
+                var allCases = db.Cases.AsNoTracking()
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ToList();
+                var records = allCases
+                    .Where(x =>
+                        (status == "All statuses" || string.Equals(x.Status, status, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrWhiteSpace(term) ||
+                         x.CaseNumber.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                         x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                         (!string.IsNullOrWhiteSpace(x.Description) && x.Description.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                         x.Status.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                    .Select(x => new CaseArchiveRow(
+                        x.Id,
+                        x.CaseNumber,
+                        x.Title,
+                        x.Status,
+                        x.CreatedAt.ToLocalTime().ToString("dd MMM yyyy  •  HH:mm", CultureInfo.InvariantCulture)))
+                    .ToList();
+
+                var previousId = (list.SelectedItem as CaseArchiveRow)?.Id;
+                list.ItemsSource = records;
+                list.SelectedItem = previousId.HasValue
+                    ? records.FirstOrDefault(x => x.Id == previousId.Value)
+                    : null;
+                emptyHint.Visibility = records.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                archiveCountText.Text = records.Count == allCases.Count
+                    ? $"{records.Count} CASE(S) IN ARCHIVE"
+                    : $"{records.Count} SHOWN  /  {allCases.Count} TOTAL";
+                UpdateSelectedCaseDetails();
+            }
+            catch (Exception ex)
+            {
+                archiveCountText.Text = "ARCHIVE UNAVAILABLE";
+                detailActivity.Text = $"The case archive could not be loaded: {ex.Message}";
+            }
+        }
+
+        list.SelectionChanged += (_, _) => UpdateSelectedCaseDetails();
+        searchBox.TextChanged += (_, _) => RefreshRows();
+        statusFilter.SelectionChanged += (_, _) => RefreshRows();
+
+        openButton.Click += (_, _) =>
         {
             if (list.SelectedItem is CaseArchiveRow selected)
                 OpenCaseWorkspace(selected.Id);
             else
-                MessageBox.Show(this, "Select a case to open its workspace.", "GHOST",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                detailActivity.Text = "Select a case first.";
         };
 
-        var statusButton = new Button
-        {
-            Content = "CLOSE / REOPEN CASE",
-            MinWidth = 190,
-            Margin = new Thickness(0, 0, 8, 0)
-        };
-        var close = new Button { Content = "DONE", Width = 92, Margin = new Thickness(0) };
-        close.Click += (_, _) => Dashboard_Click(this, new RoutedEventArgs());
         statusButton.Click += (_, _) =>
         {
             if (list.SelectedItem is not CaseArchiveRow selected)
-            {
-                MessageBox.Show(this, "Select a case first.", "GHOST",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
-            }
 
             try
             {
@@ -1881,37 +2282,25 @@ public partial class MainWindow : Window
                     Details = $"Case {item.CaseNumber} status changed to {newStatus}."
                 });
                 db.SaveChanges();
+                RefreshSummary();
                 RefreshRows();
                 RefreshStats();
                 RefreshNetwork();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"The case status could not be changed.\n\n{ex.Message}",
-                    "GHOST // Update error", MessageBoxButton.OK, MessageBoxImage.Error);
+                detailActivity.Text = $"Case status could not be changed: {ex.Message}";
             }
         };
-        var deleteCaseButton = new Button
-        {
-            Content = "DELETE SELECTED",
-            MinWidth = 140,
-            Margin = new Thickness(0, 0, 8, 0),
-            Background = new SolidColorBrush(Color.FromRgb(48, 21, 25)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(122, 49, 56)),
-            Foreground = new SolidColorBrush(Color.FromRgb(255, 150, 156))
-        };
-        deleteCaseButton.Click += (_, _) =>
+
+        deleteButton.Click += (_, _) =>
         {
             if (list.SelectedItem is not CaseArchiveRow selected)
-            {
-                MessageBox.Show(this, "Select a case to delete.", "GHOST",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
-            }
 
             var confirmation = MessageBox.Show(
                 this,
-                $"Delete case {selected.CaseNumber} / {selected.Title}?\n\nThis removes its linked database records and connections. Original evidence files stay on disk. This action cannot be undone.",
+                $"Delete case {selected.CaseNumber} / {selected.Title}?\n\nThis removes its linked database records and relationships. Original evidence files stay on disk. This action cannot be undone.",
                 "GHOST // Confirm case deletion",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -1929,68 +2318,20 @@ public partial class MainWindow : Window
                 }
 
                 var deleted = DeleteCaseRecords(db, stored, "CASE FILES");
+                RefreshSummary();
                 RefreshRows();
                 RefreshStats();
                 RefreshNetwork();
-                MessageBox.Show(
-                    this,
-                    $"Case {deleted.CaseNumber} was deleted. Its audit history was retained under its case number, and evidence files were left on disk.",
-                    "GHOST // Case deleted",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                detailActivity.Text = $"Case {deleted.CaseNumber} was deleted. Audit history was retained and evidence files remain on disk.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"The case could not be deleted.\n\n{ex.Message}",
-                    "GHOST // Delete error", MessageBoxButton.OK, MessageBoxImage.Error);
+                detailActivity.Text = $"Case could not be deleted: {ex.Message}";
             }
         };
 
-        footer.Children.Add(openCaseButton);
-        footer.Children.Add(statusButton);
-        footer.Children.Add(deleteCaseButton);
-        footer.Children.Add(close);
-        DockPanel.SetDock(footer, Dock.Bottom);
-        panel.Children.Add(footer);
-
-
-        panel.Children.Add(list);
-
-        void RefreshRows()
-        {
-            try
-            {
-                var term = search.Text.Trim();
-                using var db = new GhostDbContext();
-                var records = db.Cases
-                    .AsNoTracking()
-                    .OrderByDescending(x => x.CreatedAt)
-                    .ToList()
-                    .Select(x => new CaseArchiveRow(
-                        x.Id,
-                        x.CaseNumber,
-                        x.Title,
-                        x.Status,
-                        x.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")))
-                    .Where(x => string.IsNullOrWhiteSpace(term) ||
-                                x.CaseNumber.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                                x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                                x.Status.Contains(term, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                var previous = (list.SelectedItem as CaseArchiveRow)?.Id;
-                list.ItemsSource = records;
-                list.SelectedItem = previous.HasValue
-                    ? records.FirstOrDefault(x => x.Id == previous.Value)
-                    : null;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, $"The case archive could not be loaded.\n\n{ex.Message}",
-                    "GHOST // Archive error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        ShowModuleView(panel, "CASE FILES");
+        ShowModuleView(root, "CASE FILES");
+        RefreshSummary();
         RefreshRows();
     }
 
@@ -2180,8 +2521,8 @@ public partial class MainWindow : Window
             Content = "DELETE CASE",
             MinWidth = 115,
             Margin = actionMargin,
-            Background = new SolidColorBrush(Color.FromRgb(48, 21, 25)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(122, 49, 56)),
+            Background = new SolidColorBrush(Color.FromRgb(42, 23, 31)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(105, 55, 69)),
             Foreground = new SolidColorBrush(Color.FromRgb(255, 150, 156))
         };
         actions.Children.Add(saveButton);
@@ -3450,21 +3791,19 @@ public partial class MainWindow : Window
 
     private void DigitalLab_Click(object sender, RoutedEventArgs e)
     {
-        var root = new Grid { Margin = new Thickness(20) };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var root = new Grid { Margin = new Thickness(14, 12, 14, 12) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var header = new Border
         {
-            Margin = new Thickness(0, 0, 0, 14),
+            Margin = new Thickness(0, 0, 0, 10),
             Background = (Brush)FindResource("HeroBrush"),
             BorderBrush = (Brush)FindResource("LineBrush"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(18, 15, 18, 15)
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14, 10, 14, 10)
         };
         var headerLayout = new Grid();
         headerLayout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -3481,7 +3820,7 @@ public partial class MainWindow : Window
         headerCopy.Children.Add(new TextBlock
         {
             Text = "Digital Lab",
-            FontSize = 25,
+            FontSize = 22,
             FontWeight = FontWeights.SemiBold,
             Foreground = (Brush)FindResource("NeonBrush"),
             Margin = new Thickness(0, 4, 0, 0)
@@ -3532,7 +3871,7 @@ public partial class MainWindow : Window
         var casePicker = new ComboBox
         {
             Height = 36,
-            Width = 315,
+            Width = 300,
             MaxDropDownHeight = 360,
             DisplayMemberPath = nameof(LabCaseOption.DisplayText),
             ToolTip = "Select an investigation to filter its experiments, observations, and available Evidence Vault items"
@@ -3540,14 +3879,14 @@ public partial class MainWindow : Window
         var searchBox = new TextBox
         {
             Height = 36,
-            Width = 215,
+            Width = 300,
             ToolTip = "Search titles, objectives, methods, categories, and conclusions",
             VerticalContentAlignment = VerticalAlignment.Center
         };
         var categoryFilter = new ComboBox
         {
             Height = 36,
-            Width = 175,
+            Width = 145,
             MaxDropDownHeight = 300,
             ToolTip = "Show every category or narrow the archive to one analysis type"
         };
@@ -3558,7 +3897,7 @@ public partial class MainWindow : Window
         var statusFilter = new ComboBox
         {
             Height = 36,
-            Width = 145,
+            Width = 120,
             MaxDropDownHeight = 240,
             ToolTip = "Show all experiments, drafts, or completed experiments"
         };
@@ -3568,7 +3907,7 @@ public partial class MainWindow : Window
 
         StackPanel MakeToolbarField(string label, UIElement control)
         {
-            var panel = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+            var panel = new StackPanel { Margin = new Thickness(0, 0, 6, 0) };
             panel.Children.Add(CreateFormLabel(label));
             panel.Children.Add(control);
             return panel;
@@ -3614,11 +3953,9 @@ public partial class MainWindow : Window
         var toolbarContent = new StackPanel();
         toolbarContent.Children.Add(toolbarFields);
         toolbarContent.Children.Add(caseContextBorder);
-        var toolbarCard = CreateModuleCard(toolbarContent, new Thickness(0, 0, 0, 12));
-        toolbarCard.Padding = new Thickness(14, 10, 14, 12);
+        var toolbarCard = CreateModuleCard(toolbarContent, new Thickness(0, 0, 0, 8));
+        toolbarCard.Padding = new Thickness(10, 8, 10, 9);
         openCasesButton.Click += (_, _) => Cases_Click(this, new RoutedEventArgs());
-        Grid.SetRow(toolbarCard, 1);
-        root.Children.Add(toolbarCard);
 
         Border BuildMetric(string heading, string caption, out TextBlock valueText)
         {
@@ -3656,16 +3993,15 @@ public partial class MainWindow : Window
         metricPanel.Children.Add(BuildMetric("EXPERIMENTS", "In the selected investigation", out var experimentsMetric));
         metricPanel.Children.Add(BuildMetric("COMPLETED", "With a saved conclusion", out var completedMetric));
         metricPanel.Children.Add(BuildMetric("OBSERVATIONS", "Recorded measurements and notes", out var observationsMetric));
-        Grid.SetRow(metricPanel, 2);
-        root.Children.Add(metricPanel);
-
         var workspace = new Grid();
-        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.88, GridUnitType.Star) });
-        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.12, GridUnitType.Star) });
-        Grid.SetRow(workspace, 3);
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.43, GridUnitType.Star) });
+        workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.57, GridUnitType.Star) });
+        Grid.SetRow(workspace, 1);
         root.Children.Add(workspace);
 
         var leftDock = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(toolbarCard, Dock.Top);
+        leftDock.Children.Add(toolbarCard);
         var archiveHeader = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         archiveHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -4198,9 +4534,19 @@ public partial class MainWindow : Window
         detailTabs.Items.Add(fileToolsTab);
         var rightCard = CreateModuleCard(detailTabs);
         rightCard.Padding = new Thickness(8);
-        rightCard.Margin = new Thickness(10, 0, 0, 0);
-        Grid.SetColumn(rightCard, 1);
-        workspace.Children.Add(rightCard);
+        rightCard.Margin = new Thickness(0);
+
+        var rightDock = new DockPanel
+        {
+            LastChildFill = true,
+            Margin = new Thickness(10, 0, 0, 0)
+        };
+        metricPanel.Margin = new Thickness(0, 0, 0, 10);
+        DockPanel.SetDock(metricPanel, Dock.Top);
+        rightDock.Children.Add(metricPanel);
+        rightDock.Children.Add(rightCard);
+        Grid.SetColumn(rightDock, 1);
+        workspace.Children.Add(rightDock);
 
         var footerStatus = new TextBlock
         {
@@ -4210,7 +4556,7 @@ public partial class MainWindow : Window
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(1, 8, 1, 0)
         };
-        Grid.SetRow(footerStatus, 4);
+        Grid.SetRow(footerStatus, 2);
         root.Children.Add(footerStatus);
 
         int? selectedExperimentId = null;
