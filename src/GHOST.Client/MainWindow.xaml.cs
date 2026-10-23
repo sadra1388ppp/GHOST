@@ -3711,7 +3711,6 @@ public partial class MainWindow : Window
             searchBox.Clear();
             categoryFilter.SelectedIndex = 0;
             statusFilter.SelectedIndex = 0;
-            footerStatus.Text = "Archive filters cleared.";
         };
         Grid.SetColumn(clearFiltersButton, 1);
         archiveHeader.Children.Add(clearFiltersButton);
