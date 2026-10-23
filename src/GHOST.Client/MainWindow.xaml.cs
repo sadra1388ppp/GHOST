@@ -1996,11 +1996,9 @@ public partial class MainWindow : Window
         listHost.Children.Add(list);
         listHost.Children.Add(emptyHint);
 
-        var archiveCardContent = new DockPanel { LastChildFill = true };
         DockPanel.SetDock(listHost, Dock.Bottom);
-        archiveCardContent.Children.Add(listHost);
-        archiveCardContent.Children.Add(archiveHeader);
-        var archiveCard = CreateModuleCard(archiveCardContent, new Thickness(0, 0, 9, 0));
+        archiveDock.Children.Add(listHost);
+        var archiveCard = CreateModuleCard(archiveDock, new Thickness(0, 0, 9, 0));
         archiveCard.Padding = new Thickness(13);
         Grid.SetColumn(archiveCard, 0);
         workspace.Children.Add(archiveCard);
