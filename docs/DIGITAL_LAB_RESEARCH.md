@@ -1,41 +1,56 @@
 # GHOST Digital Lab — Research and Design Notes
 
-This note records the publicly documented workflows used as inspiration for the GHOST Digital Lab redesign. GHOST remains an offline-first Windows investigation workspace; it is not represented as a replacement for a full forensic suite.
+GHOST is an offline-first Windows investigation workspace. This design uses established forensic-workstation patterns as references; it does not claim feature parity with specialist suites.
 
-## Patterns reviewed
+## Public references reviewed
 
 ### Autopsy / The Sleuth Kit
-Autopsy emphasizes an approachable interface, a navigable results tree, timeline analysis, and hash-based filtering. GHOST applies the usability lesson by keeping experiments in a searchable archive, then presenting one selected experiment's objective, method, conclusion, and observation history together.
-
-Source: https://www.sleuthkit.org/autopsy/
-
-### TheHive
-TheHive organizes investigations around cases, observable data, case details, and an activity trail that analysts can review. GHOST adopts the case-first approach: a Digital Lab experiment belongs to a selected case; a preserved Evidence Vault item can be linked to that experiment; creation and updates continue to write audit entries and timeline events.
+Autopsy keeps the analysis workflow discoverable through a left-side results tree, a result viewer, a content viewer, keyword search, and a status area. Its timeline and hash-filtering functions also show why an examiner should be able to move from a result to its underlying context.
 
 Sources:
-- https://docs.strangebee.com/thehive/user-guides/analyst-corner/cases/about-cases/
-- https://docs.strangebee.com/thehive/how-to/alert-management/
+- https://www.sleuthkit.org/autopsy/
+- https://www.sleuthkit.org/autopsy/docs/user-docs/4.19.1/uilayout_page.html
+- https://www.sleuthkit.org/autopsy/docs/user-docs/4.21.0/timeline_page.html
+
+### Heimdall DFIR
+Heimdall brings case management, imported evidence, timelines, detections, notes, findings, and reporting into one investigation-oriented workspace. The key lesson for GHOST is to keep records attached to an investigation and make context and provenance easy to revisit.
+
+Sources:
+- https://github.com/RaiseiX/Heimdall-DFIR
+- https://raiseix.github.io/Heimdall-DFIR/
+
+### Timesketch
+Timesketch's timeline workflow uses explicit filters, tags, saved searches, and event-oriented results instead of hiding common navigation behind nested controls. GHOST borrows the visible-filter principle; it does not yet implement a full forensic timeline explorer.
+
+Sources:
+- https://timesketch.org/
+- https://timesketch.org/changelog/2023-02/
 
 ### Velociraptor
-Velociraptor documentation highlights self-describing investigative artifacts, recording collection context, and reviewing results in notebooks rather than relying on undocumented one-off actions. GHOST applies the documentation principle with explicit objective/question and method/steps fields, readable observation history, and a small read-only file inspection workflow.
+Velociraptor notebooks join explanatory Markdown with executable/query cells and keep collection context next to results. The relevant design idea is to record objective, method, findings, and observations together, so future review does not depend on an analyst's memory.
 
-Sources:
+Source:
 - https://docs.velociraptor.app/docs/notebooks/
-- https://docs.velociraptor.app/docs/forensic/
 
-## What changed in GHOST
+### TRACE
+TRACE demonstrates a compact evidence-review layout: an evidence tree, file results with timestamps, and a viewer for the selected item, with focused actions such as Browse, Timeline, Search, and Hex.
 
-- Clearer information hierarchy: investigation selector and filters, summary counts, experiment archive, and separate Overview, Observations, and Safe File Tools tabs.
-- Search across experiment title, category, status, objective, method, and conclusion.
-- Case-linked evidence relationships, with duplicate-link and cross-case checks plus audit/timeline entries.
-- A read-only utility to compute SHA-256, view basic file metadata, and preview a bounded excerpt from supported text formats. It does not execute a chosen file or modify it.
-- File inspection findings can be explicitly saved as an observation on the selected experiment.
-- Observation history is sorted newest-first and bounded to the latest 150 entries in the visible list to keep the interface responsive.
+Source:
+- https://trace.gadzhovski.com/
 
-## Integrity and scope notes
+## UI decisions in the current GHOST redesign
 
-A SHA-256 value is a fingerprint of the bytes read at that time; it does not prove authorship, provenance, or authenticity. The text preview is for supported text formats only. The Digital Lab does not execute evidence, automatically label a file malicious, or claim to replace specialist tools such as Autopsy or Velociraptor. This first pass reuses GHOST's existing database entities and relationship table, so it does not require a destructive database reset or new schema columns.
+- **Cases stays archive-first.** The prior simple archive/search/action layout is retained instead of adding a separate metrics dashboard and a second detail pane. Case rows show the case number, status, title, and creation time in a readable card.
+- **No popup selectors in Digital Lab.** Investigation selection is a visible case list; category and status filters are persistent chips; the Evidence Vault picker is a visible list. This makes the current choice visible and avoids hard-to-read dropdown menus.
+- **One consistent analysis workspace.** The left side holds investigation context and the searchable experiment archive; the right side contains the selected experiment's overview, observation history, and read-only file tools.
+- **Visible, small-scope filters.** Search covers experiment title, category, status, objective, method, and conclusion. Category and status filters show their current state instead of hiding it in a menu.
+- **An experiment records its reasoning.** Objective/question, method/steps, conclusion, recorded observations, and linked evidence stay connected to the selected case.
+- **Evidence links preserve context.** Linking evidence checks that experiment and evidence belong to the same case, rejects duplicate links and archived evidence, and records audit/timeline entries.
+- **Read-only first-pass file inspection.** The tool calculates SHA-256, reads basic metadata, and previews bounded excerpts from supported text files. It does not execute an evidence file or modify it. Findings can be explicitly saved as an experiment observation.
+- **Keep the workflow honest.** This version does not claim to auto-detect malware, parse all disk images, or replace specialist tools. A hash is a fingerprint of bytes at a point in time, not independent proof of authorship or authenticity.
 
-## Validation still required
+## Data and validation
 
-The change should be built on Windows and manually exercised against an existing MariaDB database, including an empty case, a case with several experiments, observations, archived evidence, and both small and large files. Existing persisted records must remain intact.
+The current redesign reuses GHOST's existing case, experiment, observation, evidence, relationship, audit, and timeline entities. It does not require a destructive database reset or new schema columns.
+
+Build validation should be followed by a manual pass against an existing MariaDB database: no cases; one case with multiple experiments; Draft and Completed experiments; no linked evidence; one and several evidence items; archived evidence; observation creation; searching and changing chips; and confirming that existing records persist after closing and reopening the app.
