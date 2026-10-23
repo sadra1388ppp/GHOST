@@ -3603,7 +3603,8 @@ public partial class MainWindow : Window
 
         var caseOptionTemplate = new DataTemplate(typeof(LabCaseOption));
         var caseOptionCard = new FrameworkElementFactory(typeof(Border));
-        caseOptionCard.SetValue(Border.BackgroundProperty, FindResource("PanelAltBrush"));
+        // Keep the card transparent so the selected ListView row's active background remains visible.
+        caseOptionCard.SetValue(Border.BackgroundProperty, Brushes.Transparent);
         caseOptionCard.SetValue(Border.BorderBrushProperty, FindResource("LineBrush"));
         caseOptionCard.SetValue(Border.BorderThicknessProperty, new Thickness(1));
         caseOptionCard.SetValue(Border.CornerRadiusProperty, new CornerRadius(5));
