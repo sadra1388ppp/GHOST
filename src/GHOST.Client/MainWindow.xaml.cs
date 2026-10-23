@@ -3680,7 +3680,7 @@ public partial class MainWindow : Window
             }
         }
 
-        Button MakeFilterChip(string label, string value, Dictionary<string, Button> group, Action<string> select)
+        Button MakeFilterChip(string label, string value, Dictionary<string, Button> group)
         {
             var button = new Button
             {
@@ -3695,12 +3695,6 @@ public partial class MainWindow : Window
                 ToolTip = $"Filter experiments: {label}"
             };
             group[value] = button;
-            button.Click += (_, _) =>
-            {
-                select(value);
-                RefreshFilterChipStyles();
-                RefreshMetricsAndArchive();
-            };
             return button;
         }
 
@@ -3725,7 +3719,7 @@ public partial class MainWindow : Window
                 _ => "OTHER"
             };
             categoryChipsPanel.Children.Add(MakeFilterChip(
-                caption, category, categoryFilterButtons, value => selectedCategoryFilter = value));
+                caption, category, categoryFilterButtons));
         }
 
         var statusChipsPanel = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -3738,7 +3732,7 @@ public partial class MainWindow : Window
                 _ => "COMPLETED"
             };
             statusChipsPanel.Children.Add(MakeFilterChip(
-                caption, status, statusFilterButtons, value => selectedStatusFilter = value));
+                caption, status, statusFilterButtons));
         }
 
         var categoryGroup = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
@@ -4808,6 +4802,27 @@ public partial class MainWindow : Window
             RefreshEvidencePicker();
             RefreshMetricsAndArchive();
         };
+        foreach (var (value, button) in categoryFilterButtons)
+        {
+            button.Click += (_, _) =>
+            {
+                selectedCategoryFilter = value;
+                RefreshFilterChipStyles();
+                if (ReferenceEquals(_activeModuleContent, root))
+                    RefreshMetricsAndArchive();
+            };
+        }
+        foreach (var (value, button) in statusFilterButtons)
+        {
+            button.Click += (_, _) =>
+            {
+                selectedStatusFilter = value;
+                RefreshFilterChipStyles();
+                if (ReferenceEquals(_activeModuleContent, root))
+                    RefreshMetricsAndArchive();
+            };
+        }
+
         searchBox.TextChanged += (_, _) =>
         {
             if (ReferenceEquals(_activeModuleContent, root))
