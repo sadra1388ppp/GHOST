@@ -198,12 +198,6 @@
                                 Content="▦   DASHBOARD" Click="Dashboard_Click" />
                         <Button x:Name="NavCases" Style="{StaticResource NavButtonStyle}"
                                 Content="▤   CASE FILES" Click="Cases_Click" />
-                        <Button x:Name="NavDigitalLab" Style="{StaticResource NavButtonStyle}"
-                                Content="⌕   DIGITAL LAB" Click="DigitalLab_Click" />
-                        <Button x:Name="NavFieldLab" Style="{StaticResource NavButtonStyle}"
-                                Content="⚗   FIELD LAB" Click="FieldLab_Click" />
-                        <Button x:Name="NavEvidenceVault" Style="{StaticResource NavButtonStyle}"
-                                Content="⬡   EVIDENCE VAULT" Click="EvidenceVault_Click" />
                         <Button x:Name="NavNetwork" Style="{StaticResource NavButtonStyle}"
                                 Content="⌘   INVESTIGATION NETWORK" Click="Network_Click" />
 
@@ -579,7 +573,7 @@
                                        FontSize="9" Foreground="{StaticResource MutedBrush}"
                                        Margin="0,5,0,0" />
                         </StackPanel>
-                        <UniformGrid Columns="3">
+                        <UniformGrid Columns="2">
                             <Button Style="{StaticResource PanelActionButtonStyle}"
                                     Margin="0,0,8,0" Click="NewCase_Click">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -605,21 +599,6 @@
                                         <TextBlock Text="Browse case archive" FontSize="10"
                                                    Foreground="{StaticResource TextBrush}" />
                                         <TextBlock Text="Review saved investigations" FontSize="8"
-                                                   Foreground="{StaticResource MutedBrush}"
-                                                   Margin="0,4,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource PanelActionButtonStyle}"
-                                    Margin="0" Click="DigitalLab_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="⚗" FontSize="18"
-                                               Foreground="{StaticResource CyanBrush}"
-                                               Margin="0,0,12,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="Open Digital Lab" FontSize="10"
-                                                   Foreground="{StaticResource TextBrush}" />
-                                        <TextBlock Text="Document methods and findings" FontSize="8"
                                                    Foreground="{StaticResource MutedBrush}"
                                                    Margin="0,4,0,0" />
                                     </StackPanel>
