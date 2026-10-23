@@ -3924,14 +3924,6 @@ public partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Top,
             ToolTip = "Clear search and return to all experiments in this investigation"
         };
-        clearFiltersButton.Click += (_, _) =>
-        {
-            searchBox.Clear();
-            selectedCategoryFilter = "All categories";
-            selectedStatusFilter = "All statuses";
-            RefreshFilterChipStyles();
-            RefreshMetricsAndArchive();
-        };
         Grid.SetColumn(clearFiltersButton, 1);
         archiveHeader.Children.Add(clearFiltersButton);
         DockPanel.SetDock(archiveHeader, Dock.Top);
@@ -4794,6 +4786,15 @@ public partial class MainWindow : Window
         }
 
         RefreshInvestigationContext();
+        clearFiltersButton.Click += (_, _) =>
+        {
+            searchBox.Clear();
+            selectedCategoryFilter = "All categories";
+            selectedStatusFilter = "All statuses";
+            RefreshFilterChipStyles();
+            if (ReferenceEquals(_activeModuleContent, root))
+                RefreshMetricsAndArchive();
+        };
         casePicker.SelectionChanged += (_, _) =>
         {
             if (!ReferenceEquals(_activeModuleContent, root))
