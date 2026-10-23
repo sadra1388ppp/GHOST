@@ -234,7 +234,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="GHOST / INVESTIGATION OPERATIONS" FontSize="9"
                                Foreground="{StaticResource NeonBrush}" />
-                    <TextBlock x:Name="PageTitle" Text="Command Center" FontSize="22"
+                    <TextBlock x:Name="PageTitle" Text="Dashboard" FontSize="22"
                                FontWeight="SemiBold" Margin="0,4,0,0" />
                     <TextBlock x:Name="PageEyebrow" Text="PRIVATE INVESTIGATION WORKSPACE"
                                Visibility="Collapsed" />
@@ -982,7 +982,7 @@
                                     <TextBlock x:Name="GraphEmptyTitle" Text="NO INVESTIGATION NODES" FontSize="12"
                                                Foreground="{StaticResource NeonBrush}"
                                                HorizontalAlignment="Center" />
-                                    <TextBlock Text="Create case records from the Command Center first. They will appear here automatically. As more evidence and experiments are added, they can be connected into your map."
+                                    <TextBlock Text="Create case records from the Dashboard first. They will appear here automatically. As more evidence and experiments are added, they can be connected into your map."
                                                FontSize="9" Foreground="{StaticResource MutedBrush}"
                                                TextAlignment="Center" TextWrapping="Wrap"
                                                Margin="0,11,0,0" LineHeight="16" />
