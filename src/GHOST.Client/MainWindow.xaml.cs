@@ -1201,6 +1201,7 @@ public partial class MainWindow : Window
             Foreground = new SolidColorBrush(entry.Color),
             FontWeight = entry.IsBold ? FontWeights.SemiBold : FontWeights.Normal,
             TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
             Margin = new Thickness(0, 0, 0, 3)
         };
         panel.Children.Add(line);
@@ -1302,8 +1303,7 @@ public partial class MainWindow : Window
         var localNow = DateTime.Now;
         ClockText.Text = localNow.ToString("HH:mm:ss");
         ClockDateText.Text = localNow.ToString("ddd, dd MMM yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
-        SystemHostText.Text = $"{Environment.MachineName}  /  {Environment.ProcessorCount} AVAILABLE CPUs";
-        SystemUptimeText.Text = $"SYSTEM UPTIME / {FormatUptime(Environment.TickCount64)}";
+        SystemUptimeText.Text = FormatUptime(Environment.TickCount64);
 
         var cpuUsage = ReadCpuUsagePercent();
         var cpuDetail = _cpuCounterAvailable
