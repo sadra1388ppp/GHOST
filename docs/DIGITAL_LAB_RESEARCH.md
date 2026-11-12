@@ -47,11 +47,11 @@ Source:
 - **Separate evidence, results, and conclusions.** Distinguish original file metadata and hashes from derived observations, experiment methods, findings, and analyst conclusions.
 - **Preserve provenance.** Link evidence and analytical records back to the owning case. Record meaningful changes in the audit log and timeline.
 - **Read-only by default.** Inspection should not execute source files or modify evidence. Actions that change records should be explicit and auditable.
-- **No destructive rebuild.** Reuse the existing MariaDB case, experiment, observation, evidence, relationship, audit, and timeline data unless a separately reviewed migration is genuinely required.
+- **No destructive rebuild.** Reuse the existing local JSON case, experiment, observation, evidence, relationship, audit, and timeline data unless a separately reviewed migration is genuinely required.
 - **Do not overstate forensic capabilities.** The new UI should not claim automatic malware detection, full disk-image parsing, or specialist-suite parity unless those features are really implemented and validated.
 
 ## Data and validation
 
-The fresh implementation should reuse GHOST's existing case, experiment, observation, evidence, relationship, audit, and timeline entities. Removing the old pages did not delete stored rows, source files, or vault files. Avoid a destructive database reset or new schema columns unless a separate reviewed change requires them.
+The fresh implementation should reuse GHOST's existing case, experiment, observation, evidence, relationship, audit, and timeline entities. Removing the old pages did not delete stored rows, source files, or vault files. Avoid a destructive data deletion or new schema columns unless a separate reviewed change requires them.
 
-Build validation should be followed by a manual pass against an existing MariaDB database: no cases; one case with multiple experiments; Draft and Completed experiments; no linked evidence; one and several evidence items; archived evidence; observation creation; searching and changing chips; and confirming that existing records persist after closing and reopening the app.
+Build validation should be followed by a manual pass against an existing local JSON files: no cases; one case with multiple experiments; Draft and Completed experiments; no linked evidence; one and several evidence items; archived evidence; observation creation; searching and changing chips; and confirming that existing records persist after closing and reopening the app.
