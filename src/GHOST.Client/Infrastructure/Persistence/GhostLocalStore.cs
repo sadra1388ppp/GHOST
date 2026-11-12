@@ -18,6 +18,7 @@ public sealed class GhostLocalStore : IDisposable
     public LocalCollection<AuditEntry> AuditLogs { get; }
     public GhostLocalStore()
     {
+        MigrateLegacyFiles();
         Directory.CreateDirectory(DataDirectory);
         Directory.CreateDirectory(Path.Combine(DataDirectory, "Evidence"));
         Directory.CreateDirectory(Path.Combine(DataDirectory, "Experiments"));
@@ -30,8 +31,31 @@ public sealed class GhostLocalStore : IDisposable
         TimelineEvents = Load<TimelineEvent>("timeline.json");
         AuditLogs = Load<AuditEntry>("audit.json");
     }
-    public static void Initialize() { using var store = new GhostLocalStore(); store.SaveChanges(); }
-    public int SaveChanges()
+    public static void Initialize() { using var store = new GhostLocalStore(); store.Save(); }
+
+    private static void MigrateLegacyFiles()
+    {
+        var oldRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
+        if (!Directory.Exists(oldRoot)) return;
+
+        foreach (var folder in new[] { "Evidence", "Experiments" })
+        {
+            var source = Path.Combine(oldRoot, folder);
+            if (!Directory.Exists(source)) continue;
+            foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(source, file);
+                var destination = Path.Combine(DataDirectory, folder, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                if (!File.Exists(destination)) File.Copy(file, destination);
+            }
+        }
+
+        var oldHistory = Path.Combine(oldRoot, "PowerShellHistory.txt");
+        var newHistory = Path.Combine(DataDirectory, "PowerShellHistory.txt");
+        if (File.Exists(oldHistory) && !File.Exists(newHistory)) File.Copy(oldHistory, newHistory);
+    }
+    public int Save()
     {
         lock (FileLock)
         {
@@ -80,7 +104,3 @@ public sealed class LocalCollection<T> : List<T> where T : class
     public void RemoveRange(IEnumerable<T> items) { foreach (var item in items.ToList()) Remove(item); }
 }
 
-public static class LocalQueryExtensions
-{
-    public static IQueryable<T> AsNoTracking<T>(this IEnumerable<T> source) => source.AsQueryable();
-}
