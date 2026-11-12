@@ -2054,7 +2054,7 @@ public partial class MainWindow : Window
             caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
             if (caseFile is null)
             {
-                MessageBox.Show(this, "This case no longer exists in the local database.", "GHOST",
+                MessageBox.Show(this, "This case no longer exists in local storage.", "GHOST",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 RefreshStats();
                 return;
