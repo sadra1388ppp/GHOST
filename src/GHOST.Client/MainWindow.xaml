@@ -427,7 +427,7 @@
                                 <Grid Grid.Column="0" Margin="0">
                                     <StackPanel Orientation="Horizontal"
                                                 VerticalAlignment="Top"
-                                                Margin="18,13,8,0">
+                                                Margin="12,13,8,0">
                                         <Ellipse Width="7" Height="7" Fill="#74E6B7"
                                                  Margin="0,0,8,0"
                                                  VerticalAlignment="Center">
