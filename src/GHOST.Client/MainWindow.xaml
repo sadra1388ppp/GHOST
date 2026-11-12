@@ -170,7 +170,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,12,0,7">
                                 <TextBlock Text="●" Foreground="{StaticResource NeonBrush}" FontSize="10"
                                            Margin="0,0,8,0" />
-                                <TextBlock Text="DATABASE READY" Foreground="{StaticResource TextBrush}"
+                                <TextBlock Text="LOCAL STORAGE READY" Foreground="{StaticResource TextBrush}"
                                            FontSize="10" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
