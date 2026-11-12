@@ -1193,15 +1193,24 @@ public partial class MainWindow : Window
 
     private void RenderConsoleLine(StackPanel panel, ScrollViewer scrollViewer, ConsoleTranscriptEntry entry)
     {
-        var line = new TextBlock
+        var line = new TextBox
         {
             Text = entry.Text,
             FontFamily = (FontFamily)FindResource("HackerFont"),
             FontSize = 9,
             Foreground = new SolidColorBrush(entry.Color),
             FontWeight = entry.IsBold ? FontWeights.SemiBold : FontWeights.Normal,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            IsReadOnly = true,
+            IsTabStop = false,
+            AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
-            IsTextSelectionEnabled = true,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            CaretBrush = Brushes.Transparent,
+            SelectionBrush = new SolidColorBrush(Color.FromRgb(46, 104, 77)),
             Margin = new Thickness(0, 0, 0, 3)
         };
         panel.Children.Add(line);
