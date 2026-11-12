@@ -134,10 +134,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="ButtonChrome"
-                                Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
+                        <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -155,110 +153,81 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="WindowCloseButtonStyle"
-               TargetType="{x:Type Button}"
+        <Style x:Key="WindowCloseButtonStyle" TargetType="{x:Type Button}"
                BasedOn="{StaticResource WindowCaptionButtonStyle}">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="ButtonChrome"
-                                Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
+                        <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonChrome" Property="Background" Value="#C42B1C" />
                                 <Setter Property="Foreground" Value="White" />
-                     <!-- CUSTOM GHOST WINDOW TITLE BAR -->
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="Background" Value="#A82016" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>ces>
+
+    <Grid Background="{StaticResource BgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="254" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- CUSTOM GHOST WINDOW TITLE BAR -->
         <Grid Grid.Row="0" Grid.ColumnSpan="2" Background="#0A1117">
-            <Border Background="#0A1117"
-                    BorderBrush="#1B2C36"
-                    BorderThickness="0,0,0,1" />
+            <Border Background="#0A1117" BorderBrush="#1B2C36" BorderThickness="0,0,0,1" />
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="254" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="17,0,0,0">
-                    <Border Width="23" Height="23"
-                            CornerRadius="6"
-                            Background="#12251B"
-                            BorderBrush="#34734C"
-                            BorderThickness="1">
-                        <TextBlock Text="G"
-                                   FontFamily="Segoe UI"
-                                   FontSize="15"
-                                   FontWeight="Bold"
-                                   Foreground="#74E6B7"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="17,0,0,0">
+                    <Border Width="23" Height="23" CornerRadius="6"
+                            Background="#12251B" BorderBrush="#34734C" BorderThickness="1">
+                        <TextBlock Text="G" FontFamily="Segoe UI" FontSize="15"
+                                   FontWeight="Bold" Foreground="#74E6B7"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <StackPanel VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="GHOST"
-                                   FontFamily="Segoe UI"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Foreground="#E3F0E8" />
-                        <TextBlock Text="INVESTIGATION OS"
-                                   FontFamily="Segoe UI"
-                                   FontSize="6.5"
-                                   Foreground="#789487"
-                                   Margin="0,1,0,0" />
+                        <TextBlock Text="GHOST" FontFamily="Segoe UI" FontSize="10"
+                                   FontWeight="Bold" Foreground="#E3F0E8" />
+                        <TextBlock Text="INVESTIGATION OS" FontFamily="Segoe UI" FontSize="6.5"
+                                   Foreground="#789487" Margin="0,1,0,0" />
                     </StackPanel>
                 </StackPanel>
-
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Stretch"
-                            HorizontalAlignment="Right">
-                    <Button ToolTip="Minimize"
-                            Style="{StaticResource WindowCaptionButtonStyle}"
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Stretch" HorizontalAlignment="Right">
+                    <Button ToolTip="Minimize" Style="{StaticResource WindowCaptionButtonStyle}"
                             Click="WindowMinimize_Click">
-                        <TextBlock Text="—"
-                                   FontFamily="Segoe UI"
-                                   FontSize="12"
+                        <TextBlock Text="—" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" />
                     </Button>
-                    <Button ToolTip="Maximize or restore"
-                            Style="{StaticResource WindowCaptionButtonStyle}"
+                    <Button ToolTip="Maximize or restore" Style="{StaticResource WindowCaptionButtonStyle}"
                             Click="WindowMaximize_Click">
-                        <TextBlock x:Name="WindowMaximizeGlyph"
-                                   Text="□"
-                                   FontFamily="Segoe UI"
+                        <TextBlock x:Name="WindowMaximizeGlyph" Text="□" FontFamily="Segoe UI"
                                    FontSize="11"
                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" />
                     </Button>
-                    <Button ToolTip="Close GHOST"
-                            Style="{StaticResource WindowCloseButtonStyle}"
+                    <Button ToolTip="Close GHOST" Style="{StaticResource WindowCloseButtonStyle}"
                             Click="WindowClose_Click">
-                        <TextBlock Text="×"
-                                   FontFamily="Segoe UI"
-                                   FontSize="18"
+                        <TextBlock Text="×" FontFamily="Segoe UI" FontSize="18"
                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" />
                     </Button>
-                </StackPanel>
-            </Grid>
-        </Grid>
-
-tonStyle}"
-                            ToolTip="Maximize or restore">
-                        <TextBlock x:Name="WindowMaximizeGlyph"
-                                   Text="□"
-                                   FontFamily="Segoe UI"
-                                   FontSize="13"
-                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" />
-                    </Button>
-                    <Button Content="×"
-                            Style="{StaticResource WindowCloseButtonStyle}"
-                            FontSize="18"
-                            Click="WindowClose_Click"
-                            ToolTip="Close GHOST" />
                 </StackPanel>
             </Grid>
         </Grid>
