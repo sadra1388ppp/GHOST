@@ -337,610 +337,560 @@
         </Border>
 
         <!-- MAIN WORKSPACE -->
-        <Grid x:Name="DashboardView" Grid.Column="1" Margin="26,20,26,22">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="58" />
-                <RowDefinition Height="150" />
-                <RowDefinition Height="108" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <Grid x:Name="DashboardView" Grid.Column="1" Margin="24,18,24,18">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,0,5,0">
+                <StackPanel>
 
-            <!-- TOP BAR -->
-            <Grid Grid.Row="0" Margin="0,0,0,4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="GHOST / INVESTIGATION OPERATIONS" FontSize="9"
-                               Foreground="{StaticResource NeonBrush}" />
-                    <TextBlock x:Name="PageTitle" Text="Dashboard" FontSize="22"
-                               FontWeight="SemiBold" Margin="0,4,0,0" />
-                    <TextBlock x:Name="PageEyebrow" Text="PRIVATE INVESTIGATION WORKSPACE"
-                               Visibility="Collapsed" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Border Background="#101B15" BorderBrush="{StaticResource LineBrush}"
-                            BorderThickness="1" CornerRadius="6" Padding="11,9" Margin="0,0,9,0">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="{StaticResource CyanBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,8,0" />
-                            <TextBlock Text="OFFLINE MODE" FontSize="9"
-                                       Foreground="{StaticResource CyanBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#0B1710" BorderBrush="#294B35"
-                            BorderThickness="1" CornerRadius="8" Padding="7,5"
-                            Margin="0,0,9,0" MinWidth="180">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Width="28" Height="30" CornerRadius="6"
-                                    Background="#13242D" BorderBrush="#28583A"
-                                    BorderThickness="1" VerticalAlignment="Center">
-                                <TextBlock Text="◷" FontSize="20" Foreground="#74E6B7"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <StackPanel Grid.Column="1" Margin="9,0,0,0"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="LOCAL TIME" FontSize="7"
-                                           Foreground="#72977D" />
-                                <TextBlock x:Name="ClockText" Text="00:00:00"
-                                           FontFamily="Consolas" FontSize="15"
-                                           FontWeight="Bold" Foreground="#74E6B7"
-                                           Margin="0,1,0,0" />
-                                <TextBlock x:Name="ClockDateText" Text="MON, 01 JAN 2026"
-                                           FontSize="7" Foreground="#9BB8A4"
-                                           Margin="0,1,0,0" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    <Button Content="+ NEW CASE" Click="NewCase_Click"
-                            Padding="14,10" FontSize="10" />
-                </StackPanel>
-            </Grid>
-
-            <!-- LIVE SYSTEM MONITOR: real Windows telemetry -->
-            <Border Grid.Row="1" Background="#081711"
-                    BorderBrush="#244B35" BorderThickness="1" CornerRadius="10"
-                    ClipToBounds="True" Margin="0,0,0,16">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="248" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top"
-                            Background="#74E6B7" />
-
-                    <!-- Host and operating-system status -->
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,8,12,8">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Width="6" Height="6" Fill="#74E6B7"
-                                     Margin="0,0,7,0" />
-                            <TextBlock Text="LIVE SYSTEM TELEMETRY" FontSize="8"
-                                       Foreground="#9DFFC1" />
-                        </StackPanel>
-                        <TextBlock Text="SYSTEM MONITOR" FontSize="18"
-                                   FontWeight="Bold" Margin="0,7,0,4"
-                                   Foreground="#F1F7FC" />
-                        <TextBlock x:Name="SystemHostText" Text="HOST / DETECTING DEVICE"
-                                   FontSize="8" Foreground="#BDD9C6"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock x:Name="SystemUptimeText" Text="UPTIME / READING..."
-                                   FontSize="8" Foreground="#86B398" Margin="0,5,0,0" />
-                    </StackPanel>
-
-                    <!-- Live metrics -->
-                    <Grid Grid.Column="1" Margin="0,10,12,10">
+                    <!-- DASHBOARD HEADER -->
+                    <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="GHOST  /  INVESTIGATION OPERATIONS"
+                                       FontSize="9" FontWeight="SemiBold"
+                                       Foreground="{StaticResource NeonBrush}" />
+                            <TextBlock x:Name="PageTitle" Text="Dashboard"
+                                       FontSize="26" FontWeight="SemiBold"
+                                       Margin="0,5,0,0" />
+                            <TextBlock x:Name="PageEyebrow"
+                                       Text="PRIVATE INVESTIGATION WORKSPACE"
+                                       Visibility="Collapsed" />
+                            <TextBlock Text="Your workspace, system health, and latest investigation activity."
+                                       FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Border Background="#101B15" BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="7"
+                                    Padding="10,8" Margin="0,0,9,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="6" Height="6" Fill="{StaticResource CyanBrush}"
+                                             VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Text="LOCAL / OFFLINE" FontSize="8"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource CyanBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#0B1710" BorderBrush="#294B35"
+                                    BorderThickness="1" CornerRadius="8"
+                                    Padding="9,6" Margin="0,0,9,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="26" Height="28" CornerRadius="6"
+                                            Background="#13242D" BorderBrush="#28583A"
+                                            BorderThickness="1" VerticalAlignment="Center">
+                                        <TextBlock Text="◷" FontSize="18" Foreground="#74E6B7"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="LOCAL TIME" FontSize="7"
+                                                   Foreground="#72977D" />
+                                        <TextBlock x:Name="ClockText" Text="00:00:00"
+                                                   FontFamily="Consolas" FontSize="14"
+                                                   FontWeight="Bold" Foreground="#74E6B7" />
+                                        <TextBlock x:Name="ClockDateText" Text="MON, 01 JAN 2026"
+                                                   FontSize="7" Foreground="#9BB8A4" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Button Content="+ NEW CASE" Click="NewCase_Click"
+                                    Padding="14,11" FontSize="9" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- LIVE SYSTEM OVERVIEW -->
+                    <Border Background="#081711" BorderBrush="#244B35"
+                            BorderThickness="1" CornerRadius="11"
+                            ClipToBounds="True" Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="3" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="#74E6B7" />
+                            <Grid Grid.Row="1" MinHeight="150">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="230" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center"
+                                            Margin="19,14,14,14">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="7" Height="7" Fill="#74E6B7"
+                                                 Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <Ellipse.Effect>
+                                                <DropShadowEffect Color="#74E6B7"
+                                                                  BlurRadius="9"
+                                                                  ShadowDepth="0"
+                                                                  Opacity="0.7" />
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <TextBlock Text="LIVE SYSTEM TELEMETRY"
+                                                   FontSize="8" FontWeight="SemiBold"
+                                                   Foreground="#9DFFC1" />
+                                    </StackPanel>
+                                    <TextBlock Text="System health"
+                                               FontSize="19" FontWeight="Bold"
+                                               Foreground="#F1F7FC" Margin="0,9,0,5" />
+                                    <TextBlock x:Name="SystemHostText"
+                                               Text="HOST / DETECTING DEVICE"
+                                               FontSize="8" Foreground="#BDD9C6"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SystemUptimeText"
+                                               Text="UPTIME / READING..."
+                                               FontSize="8" Foreground="#86B398"
+                                               Margin="0,6,0,0" />
+                                    <TextBlock Text="LOCAL DEVICE MONITOR"
+                                               FontSize="7" Foreground="#527D60"
+                                               Margin="0,11,0,0" />
+                                </StackPanel>
+
+                                <Grid Grid.Column="1" Margin="0,13,13,13">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Background="#0C1D14"
+                                            BorderBrush="#21442E" BorderThickness="1"
+                                            CornerRadius="8" Margin="0,0,8,0" Padding="11,9">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="PROCESSOR" FontSize="8"
+                                                       Foreground="#9DFFC1" />
+                                            <TextBlock x:Name="CpuUsageText" Text="--%"
+                                                       FontSize="25" FontWeight="SemiBold"
+                                                       Foreground="#74E6B7" Margin="0,3,0,2" />
+                                            <Grid Height="30" ClipToBounds="True">
+                                                <Rectangle Height="1" Fill="#1C3B29"
+                                                           VerticalAlignment="Center" />
+                                                <Path x:Name="CpuUsageSparklineFill"
+                                                      Stretch="Fill" Fill="#1D7A49"
+                                                      Opacity="0.42" StrokeThickness="0"
+                                                      Data="M 0,34 L 100,34 Z" />
+                                                <Path x:Name="CpuUsageSparklineGlow"
+                                                      Stretch="Fill" Stroke="#35FF95"
+                                                      StrokeThickness="4" Opacity="0.20"
+                                                      Data="M 0,17 L 100,17" />
+                                                <Path x:Name="CpuUsageSparkline"
+                                                      Stretch="Fill" Stroke="#74E6B7"
+                                                      StrokeThickness="1.7"
+                                                      StrokeLineJoin="Round"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      Data="M 0,17 L 100,17" />
+                                            </Grid>
+                                            <TextBlock x:Name="CpuUsageDetailText"
+                                                       Text="Sampling CPU activity..."
+                                                       FontSize="7" Foreground="#88AB94"
+                                                       Margin="0,5,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="1" Background="#0C1D14"
+                                            BorderBrush="#21442E" BorderThickness="1"
+                                            CornerRadius="8" Margin="0,0,8,0" Padding="11,9">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="MEMORY / RAM" FontSize="8"
+                                                       Foreground="#9DFFC1" />
+                                            <TextBlock x:Name="MemoryUsageText" Text="--%"
+                                                       FontSize="25" FontWeight="SemiBold"
+                                                       Foreground="#74E6B7" Margin="0,3,0,2" />
+                                            <Grid Height="30" ClipToBounds="True">
+                                                <Rectangle Height="1" Fill="#1C3B29"
+                                                           VerticalAlignment="Center" />
+                                                <Path x:Name="MemoryUsageSparklineFill"
+                                                      Stretch="Fill" Fill="#1D7A49"
+                                                      Opacity="0.42" StrokeThickness="0"
+                                                      Data="M 0,34 L 100,34 Z" />
+                                                <Path x:Name="MemoryUsageSparklineGlow"
+                                                      Stretch="Fill" Stroke="#35FF95"
+                                                      StrokeThickness="4" Opacity="0.20"
+                                                      Data="M 0,17 L 100,17" />
+                                                <Path x:Name="MemoryUsageSparkline"
+                                                      Stretch="Fill" Stroke="#74E6B7"
+                                                      StrokeThickness="1.7"
+                                                      StrokeLineJoin="Round"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      Data="M 0,17 L 100,17" />
+                                            </Grid>
+                                            <TextBlock x:Name="MemoryUsageDetailText"
+                                                       Text="Reading physical memory..."
+                                                       FontSize="7" Foreground="#88AB94"
+                                                       Margin="0,5,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="2" Background="#0C1D14"
+                                            BorderBrush="#21442E" BorderThickness="1"
+                                            CornerRadius="8" Padding="11,9">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="SYSTEM DRIVE" FontSize="8"
+                                                       Foreground="#9DFFC1" />
+                                            <TextBlock x:Name="DiskUsageText" Text="--%"
+                                                       FontSize="25" FontWeight="SemiBold"
+                                                       Foreground="#74E6B7" Margin="0,3,0,2" />
+                                            <Grid Height="30" ClipToBounds="True">
+                                                <Rectangle Height="1" Fill="#1C3B29"
+                                                           VerticalAlignment="Center" />
+                                                <Path x:Name="DiskUsageSparklineFill"
+                                                      Stretch="Fill" Fill="#1D7A49"
+                                                      Opacity="0.42" StrokeThickness="0"
+                                                      Data="M 0,34 L 100,34 Z" />
+                                                <Path x:Name="DiskUsageSparklineGlow"
+                                                      Stretch="Fill" Stroke="#35FF95"
+                                                      StrokeThickness="4" Opacity="0.20"
+                                                      Data="M 0,17 L 100,17" />
+                                                <Path x:Name="DiskUsageSparkline"
+                                                      Stretch="Fill" Stroke="#74E6B7"
+                                                      StrokeThickness="1.7"
+                                                      StrokeLineJoin="Round"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      Data="M 0,17 L 100,17" />
+                                            </Grid>
+                                            <TextBlock x:Name="DiskUsageDetailText"
+                                                       Text="Reading system drive..."
+                                                       FontSize="7" Foreground="#88AB94"
+                                                       Margin="0,5,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- INVESTIGATION METRICS -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Margin="1,0,1,8">
+                            <TextBlock Text="INVESTIGATION OVERVIEW" FontSize="9"
+                                       FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Grid.Column="1" Text="LIVE LOCAL RECORDS"
+                                       HorizontalAlignment="Right" FontSize="7"
+                                       Foreground="#526675" />
+                        </Grid>
+                        <UniformGrid Grid.Row="1" Columns="5">
+                            <Border Background="{StaticResource PanelBrush}"
+                                    BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="9"
+                                    Padding="12,10" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="OPEN CASES" FontSize="8"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="CasesCount" Text="0"
+                                               FontSize="27" FontWeight="SemiBold"
+                                               Foreground="{StaticResource NeonBrush}"
+                                               Margin="0,4,0,1" />
+                                    <TextBlock Text="ACTIVE INVESTIGATIONS"
+                                               FontSize="7" Foreground="#718878" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource PanelBrush}"
+                                    BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="9"
+                                    Padding="12,10" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="CLOSED CASES" FontSize="8"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="ClosedCasesCount" Text="0"
+                                               FontSize="27" FontWeight="SemiBold"
+                                               Foreground="#FF7A83" Margin="0,4,0,1" />
+                                    <TextBlock Text="COMPLETED INVESTIGATIONS"
+                                               FontSize="7" Foreground="#B97980" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource PanelBrush}"
+                                    BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="9"
+                                    Padding="12,10" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL CASES" FontSize="8"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="TotalCasesCount" Text="0"
+                                               FontSize="27" FontWeight="SemiBold"
+                                               Foreground="#87BFFF" Margin="0,4,0,1" />
+                                    <TextBlock Text="ALL INVESTIGATIONS"
+                                               FontSize="7" Foreground="#8299B5" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource PanelBrush}"
+                                    BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="9"
+                                    Padding="12,10" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="EXPERIMENTS" FontSize="8"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="ExperimentsCount" Text="0"
+                                               FontSize="27" FontWeight="SemiBold"
+                                               Foreground="{StaticResource CyanBrush}"
+                                               Margin="0,4,0,1" />
+                                    <TextBlock Text="RECORDED PROCEDURES"
+                                               FontSize="7" Foreground="#718878" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource PanelBrush}"
+                                    BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="9"
+                                    Padding="12,10">
+                                <StackPanel>
+                                    <TextBlock Text="EVIDENCE ITEMS" FontSize="8"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="EvidenceCount" Text="0"
+                                               FontSize="27" FontWeight="SemiBold"
+                                               Foreground="#D8E98A" Margin="0,4,0,1" />
+                                    <TextBlock Text="SAVED RECORDS"
+                                               FontSize="7" Foreground="#A6A77A" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </Grid>
+
+                    <!-- RECENT INVESTIGATIONS + COMMAND DECK -->
+                    <Grid MinHeight="365" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.02*" />
+                            <ColumnDefinition Width="1*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Background="#0C1D14"
-                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
-                                Margin="0,0,7,0" Padding="10,7">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="CPU LOAD" FontSize="8"
-                                           Foreground="#9DFFC1" />
-                                <TextBlock x:Name="CpuUsageText" Text="--%"
-                                           FontSize="23" FontWeight="SemiBold"
-                                           Foreground="#74E6B7" Margin="0,2,0,3" />
-                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
-                                    <Rectangle Height="1" Fill="#1C3B29"
-                                               VerticalAlignment="Center" Opacity="0.8" />
-                                    <Path x:Name="CpuUsageSparklineFill"
-                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
-                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
-                                    <Path x:Name="CpuUsageSparklineGlow"
-                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
-                                          Opacity="0.20" Data="M 0,17 L 100,17" />
-                                    <Path x:Name="CpuUsageSparkline"
-                                          Stretch="Fill" Stroke="#74E6B7" StrokeThickness="1.7"
-                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
-                                </Grid>
-                                <TextBlock x:Name="CpuUsageDetailText" Text="Sampling CPU activity..."
-                                           FontSize="7" Foreground="#88AB94"
-                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="1" Background="#0C1D14"
-                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
-                                Margin="0,0,7,0" Padding="10,7">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="MEMORY / RAM" FontSize="8"
-                                           Foreground="#9DFFC1" />
-                                <TextBlock x:Name="MemoryUsageText" Text="--%"
-                                           FontSize="23" FontWeight="SemiBold"
-                                           Foreground="#74E6B7" Margin="0,2,0,3" />
-                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
-                                    <Rectangle Height="1" Fill="#1C3B29"
-                                               VerticalAlignment="Center" Opacity="0.8" />
-                                    <Path x:Name="MemoryUsageSparklineFill"
-                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
-                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
-                                    <Path x:Name="MemoryUsageSparklineGlow"
-                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
-                                          Opacity="0.20" Data="M 0,17 L 100,17" />
-                                    <Path x:Name="MemoryUsageSparkline"
-                                          Stretch="Fill" Stroke="#74E6B7" StrokeThickness="1.7"
-                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
-                                </Grid>
-                                <TextBlock x:Name="MemoryUsageDetailText" Text="Reading physical memory..."
-                                           FontSize="7" Foreground="#88AB94"
-                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="2" Background="#0C1D14"
-                                BorderBrush="#21442E" BorderThickness="1" CornerRadius="6"
-                                Padding="10,7">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="SYSTEM DRIVE" FontSize="8"
-                                           Foreground="#9DFFC1" />
-                                <TextBlock x:Name="DiskUsageText" Text="--%"
-                                           FontSize="23" FontWeight="SemiBold"
-                                           Foreground="#74E6B7" Margin="0,2,0,3" />
-                                <Grid Height="31" Margin="0,1,0,1" ClipToBounds="True">
-                                    <Rectangle Height="1" Fill="#1C3B29"
-                                               VerticalAlignment="Center" Opacity="0.8" />
-                                    <Path x:Name="DiskUsageSparklineFill"
-                                          Stretch="Fill" Fill="#1D7A49" Opacity="0.42"
-                                          StrokeThickness="0" Data="M 0,34 L 100,34 Z" />
-                                    <Path x:Name="DiskUsageSparklineGlow"
-                                          Stretch="Fill" Stroke="#35FF95" StrokeThickness="4"
-                                          Opacity="0.20" Data="M 0,17 L 100,17" />
-                                    <Path x:Name="DiskUsageSparkline"
-                                          Stretch="Fill" Stroke="#74E6B7" StrokeThickness="1.7"
-                                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round" Data="M 0,17 L 100,17" />
-                                </Grid>
-                                <TextBlock x:Name="DiskUsageDetailText" Text="Reading system drive..."
-                                           FontSize="7" Foreground="#88AB94"
-                                           Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <!-- METRIC CARDS -->
-            <UniformGrid Grid.Row="2" Columns="5" Margin="0,0,0,14">
-                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                        BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Border Background="{StaticResource NeonBrush}" CornerRadius="8,8,0,0" />
-                        <Grid Grid.Row="1" Margin="14,9,12,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="OPEN CASES" FontSize="9" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock x:Name="CasesCount" Text="0" FontSize="27" FontWeight="SemiBold"
-                                           Foreground="{StaticResource NeonBrush}" Margin="0,2,0,0" />
-                                <TextBlock Text="ACTIVE INVESTIGATIONS" FontSize="7" Foreground="#718878" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
-                                    Background="#17291C" VerticalAlignment="Top">
-                                <TextBlock Text="▤" FontSize="17" Foreground="{StaticResource NeonBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                        BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Border Background="#FF5C68" CornerRadius="8,8,0,0" />
-                        <Grid Grid.Row="1" Margin="14,9,12,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="CLOSED CASES" FontSize="9" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock x:Name="ClosedCasesCount" Text="0" FontSize="27" FontWeight="SemiBold"
-                                           Foreground="#FF7A83" Margin="0,2,0,0" />
-                                <TextBlock Text="COMPLETED INVESTIGATIONS" FontSize="7" Foreground="#B97980" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
-                                    Background="#35181D" VerticalAlignment="Top">
-                                <TextBlock Text="✓" FontSize="17" Foreground="#FF7A83"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                        BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Border Background="#87BFFF" CornerRadius="8,8,0,0" />
-                        <Grid Grid.Row="1" Margin="14,9,12,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="TOTAL CASES" FontSize="9" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock x:Name="TotalCasesCount" Text="0" FontSize="27" FontWeight="SemiBold"
-                                           Foreground="#87BFFF" Margin="0,2,0,0" />
-                                <TextBlock Text="ALL INVESTIGATIONS" FontSize="7" Foreground="#8299B5" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
-                                    Background="#182638" VerticalAlignment="Top">
-                                <TextBlock Text="Σ" FontSize="18" FontWeight="SemiBold" Foreground="#87BFFF"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                        BorderThickness="1" CornerRadius="9" Padding="0" Margin="0,0,10,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Border Background="{StaticResource CyanBrush}" CornerRadius="8,8,0,0" />
-                        <Grid Grid.Row="1" Margin="14,9,12,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="EXPERIMENTS" FontSize="9" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock x:Name="ExperimentsCount" Text="0" FontSize="27" FontWeight="SemiBold"
-                                           Foreground="{StaticResource CyanBrush}" Margin="0,2,0,0" />
-                                <TextBlock Text="RECORDED PROCEDURES" FontSize="7" Foreground="#718878" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
-                                    Background="#14272B" VerticalAlignment="Top">
-                                <TextBlock Text="⌁" FontSize="20" Foreground="{StaticResource CyanBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                        BorderThickness="1" CornerRadius="9" Padding="0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Border Background="#D8E98A" CornerRadius="8,8,0,0" />
-                        <Grid Grid.Row="1" Margin="14,9,12,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="EVIDENCE ITEMS" FontSize="9" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock x:Name="EvidenceCount" Text="0" FontSize="27" FontWeight="SemiBold"
-                                           Foreground="#D8E98A" Margin="0,2,0,0" />
-                                <TextBlock Text="ACTIVE VAULT RECORDS" FontSize="7" Foreground="#718878" />
-                            </StackPanel>
-                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
-                                    Background="#292B1A" VerticalAlignment="Top">
-                                <TextBlock Text="⬡" FontSize="17" Foreground="#D8E98A"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </UniformGrid>
-
-            <!-- HOME WORKSPACE: no investigation-network preview on the dashboard -->
-            <Grid Grid.Row="3">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.35*" />
-                    <ColumnDefinition Width="1*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- OPERATIONS DECK -->
-                <Border Grid.Row="0" Grid.ColumnSpan="2"
-                        Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
-                        CornerRadius="8" Padding="17" Margin="0,0,0,12">
-                    <DockPanel LastChildFill="True">
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                            <TextBlock Text="QUICK OPERATIONS" FontSize="10"
-                                       Foreground="{StaticResource NeonBrush}" />
-                            <TextBlock Text="Start a case, review your archive, or continue analysis."
-                                       FontSize="9" Foreground="{StaticResource MutedBrush}"
-                                       Margin="0,5,0,0" />
-                        </StackPanel>
-                        <UniformGrid Columns="2">
-                            <Button Style="{StaticResource PanelActionButtonStyle}"
-                                    Margin="0,0,8,0" Click="NewCase_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="＋" FontSize="20"
-                                               Foreground="{StaticResource NeonBrush}"
-                                               Margin="0,0,12,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="Create investigation" FontSize="10"
-                                                   Foreground="{StaticResource TextBrush}" />
-                                        <TextBlock Text="Open a new case file" FontSize="8"
+                        <!-- RECENT CASES -->
+                        <Border Grid.Column="0" Background="{StaticResource PanelBrush}"
+                                BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                CornerRadius="10" Padding="13" Margin="0,0,10,0">
+                            <DockPanel LastChildFill="True">
+                                <Grid DockPanel.Dock="Top" Margin="1,0,1,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="INVESTIGATION ACTIVITY" FontSize="8"
+                                                   Foreground="#879AA8" />
+                                        <TextBlock Text="Recent case files" FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextBrush}"
+                                                   Margin="0,4,0,0" />
+                                        <TextBlock Text="Your latest saved investigations."
+                                                   FontSize="8"
                                                    Foreground="{StaticResource MutedBrush}"
                                                    Margin="0,4,0,0" />
                                     </StackPanel>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource PanelActionButtonStyle}"
-                                    Margin="0,0,8,0" Click="Cases_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="▤" FontSize="17"
-                                               Foreground="{StaticResource CyanBrush}"
-                                               Margin="0,0,12,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="Browse case archive" FontSize="10"
-                                                   Foreground="{StaticResource TextBrush}" />
-                                        <TextBlock Text="Review saved investigations" FontSize="8"
-                                                   Foreground="{StaticResource MutedBrush}"
-                                                   Margin="0,4,0,0" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                                Orientation="Horizontal">
+                                        <Button x:Name="OpenRecentCaseButton"
+                                                Content="OPEN SELECTED"
+                                                Click="OpenRecentCase_Click"
+                                                IsEnabled="False"
+                                                Style="{StaticResource NavButtonStyle}"
+                                                Padding="8,6" Margin="0,0,6,0"
+                                                FontSize="7" />
+                                        <Button Content="VIEW ALL  →"
+                                                Style="{StaticResource NavButtonStyle}"
+                                                Click="Cases_Click" Padding="8,6"
+                                                Margin="0" FontSize="7" />
                                     </StackPanel>
-                                </StackPanel>
-                            </Button>
-                        </UniformGrid>
-                    </DockPanel>
-                </Border>
-
-                <!-- RECENT CASES -->
-                <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource PanelBrush}"
-                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
-                        Padding="10,12" Margin="0,0,12,0">
-                    <DockPanel LastChildFill="True">
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,11">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="CASE ACTIVITY / LATEST RECORDS" FontSize="7"
-                                           Foreground="#879AA8" />
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
-                                            VerticalAlignment="Center">
-                                    <TextBlock Text="RECENT CASE FILES" FontSize="12"
-                                               FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
-                                    <Border Background="#13242D" BorderBrush="#2A4B55"
-                                            BorderThickness="1" CornerRadius="4"
-                                            Padding="5,2" Margin="9,0,0,0">
-                                        <TextBlock Text="LATEST 4" FontSize="7"
-                                                   Foreground="{StaticResource NeonBrush}" />
-                                    </Border>
-                                </StackPanel>
-                                <TextBlock Text="Your latest investigations at a glance."
-                                           FontSize="8" Foreground="{StaticResource MutedBrush}"
-                                           Margin="0,4,0,0" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                        VerticalAlignment="Center" Margin="8,0,0,0">
-                                <Button x:Name="OpenRecentCaseButton" Content="OPEN SELECTED"
-                                        Click="OpenRecentCase_Click" IsEnabled="False"
-                                        Style="{StaticResource NavButtonStyle}"
-                                        Padding="9,6" Margin="0,0,6,0" FontSize="8" />
-                                <Button Content="VIEW ALL  →"
-                                        Style="{StaticResource NavButtonStyle}" Click="Cases_Click"
-                                        Padding="9,6" Margin="0" FontSize="8" />
-                            </StackPanel>
-                        </Grid>
-                        <Grid>
-                            <ListBox x:Name="RecentCasesList"
-                                     ItemTemplate="{StaticResource RecentCaseTemplate}"
-                                     ItemContainerStyle="{StaticResource RecentCaseItemStyle}"
-                                     Background="Transparent" BorderThickness="0"
-                                     Padding="0"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     SelectionChanged="RecentCasesList_SelectionChanged"
-                                     MouseDoubleClick="RecentCase_DoubleClick" />
-                            <StackPanel x:Name="EmptyCasesHint" HorizontalAlignment="Center"
-                                        VerticalAlignment="Center" IsHitTestVisible="False">
-                                <TextBlock Text="NO CASES YET" FontSize="10"
-                                           Foreground="{StaticResource MutedBrush}"
-                                           HorizontalAlignment="Center" />
-                                <TextBlock Text="Create an investigation to populate this space."
-                                           FontSize="8" Foreground="#788A97" Margin="0,6,0,0"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </Grid>
-                    </DockPanel>
-                </Border>
-
-                <!-- GHOST SHELL: compact native PowerShell console with shared command history -->
-                <Border Grid.Row="1" Grid.Column="1"
-                        Background="#030609" BorderBrush="#25505A" BorderThickness="1"
-                        CornerRadius="8" Padding="0" ClipToBounds="True">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#43CFE0" BlurRadius="16"
-                                          ShadowDepth="0" Opacity="0.12" />
-                    </Border.Effect>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="40" />
-                            <RowDefinition Height="28" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="18" />
-                        </Grid.RowDefinitions>
-
-                        <!-- Hacker-console chrome -->
-                        <Border Grid.Row="0" Background="#0D170F"
-                                BorderBrush="#285337" BorderThickness="0,0,0,1">
-                            <Grid Margin="10,1,10,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                                            Margin="0,0,9,0">
-                                    <Ellipse Width="7" Height="7" Fill="#74E6B7" Margin="0,0,4,0" />
-                                    <Ellipse Width="7" Height="7" Fill="#36734A" Margin="0,0,4,0" />
-                                    <Ellipse Width="7" Height="7" Fill="#244B31" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="GHOST // COMMAND DECK" FontSize="9"
-                                               FontWeight="Bold" Foreground="#D6FFE0" />
-                                    <TextBlock x:Name="DashboardConsoleHostText"
-                                               Text="LOCAL SESSION / INITIALIZING"
-                                               FontSize="7" Foreground="#6F9D7B"
-                                               Margin="0,2,0,0" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <Border Background="#13242D" BorderBrush="#2A4B55"
-                                            BorderThickness="1" CornerRadius="3" Padding="6,3"
-                                            VerticalAlignment="Center">
-                                        <TextBlock x:Name="DashboardConsoleStatusText" Text="STARTING"
-                                                   FontSize="7" Foreground="#74E6B7" />
-                                    </Border>
-                                    <Button Content="↻ RESTART" Click="DashboardConsoleRestart_Click"
-                                            Padding="6,3" FontSize="7" Margin="5,0,0,0"
-                                            Background="#13242D" BorderBrush="#34764B"
-                                            Foreground="#B5FFC8" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- Compact quick-run command strip -->
-                        <Border Grid.Row="1" Background="#071009"
-                                BorderBrush="#142D1B" BorderThickness="0,0,0,1"
-                                Padding="7,1">
-                            <DockPanel LastChildFill="False" VerticalAlignment="Center">
-                                <TextBlock Text="QUICK RUN" FontSize="7" FontWeight="Bold"
-                                           Foreground="#5F8F6C" VerticalAlignment="Center"
-                                           Margin="2,0,7,0" />
-                                <Button Content="PWD" Tag="Get-Location"
-                                        Click="DashboardConsoleQuickCommand_Click"
-                                        Padding="6,2" FontSize="7" Margin="2,0"
-                                        Background="#0D1C11" BorderBrush="#244B30"
-                                        Foreground="#9DFFC1" ToolTip="Run Get-Location" />
-                                <Button Content="PROCESSES" Tag="Get-Process | Select-Object -First 5"
-                                        Click="DashboardConsoleQuickCommand_Click"
-                                        Padding="6,2" FontSize="7" Margin="2,0"
-                                        Background="#0D1C11" BorderBrush="#244B30"
-                                        Foreground="#9DFFC1" ToolTip="Show the first five processes" />
-                                <Button Content="FILES" Tag="Get-ChildItem -Force | Select-Object -First 8"
-                                        Click="DashboardConsoleQuickCommand_Click"
-                                        Padding="6,2" FontSize="7" Margin="2,0"
-                                        Background="#0D1C11" BorderBrush="#244B30"
-                                        Foreground="#9DFFC1" ToolTip="List the first eight items in the current directory" />
-                                <Button Content="PS INFO" Tag="$PSVersionTable"
-                                        Click="DashboardConsoleQuickCommand_Click"
-                                        Padding="6,2" FontSize="7" Margin="2,0"
-                                        Background="#0D1C11" BorderBrush="#244B30"
-                                        Foreground="#9DFFC1" ToolTip="Show PowerShell version details" />
+                                </Grid>
+                                <Grid>
+                                    <ListBox x:Name="RecentCasesList"
+                                             ItemTemplate="{StaticResource RecentCaseTemplate}"
+                                             ItemContainerStyle="{StaticResource RecentCaseItemStyle}"
+                                             Background="Transparent" BorderThickness="0"
+                                             Padding="0"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             SelectionChanged="RecentCasesList_SelectionChanged"
+                                             MouseDoubleClick="RecentCase_DoubleClick" />
+                                    <StackPanel x:Name="EmptyCasesHint"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsHitTestVisible="False">
+                                        <TextBlock Text="NO CASES YET" FontSize="10"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Text="Create an investigation to populate this space."
+                                                   FontSize="8" Foreground="#788A97"
+                                                   Margin="0,6,0,0"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
                             </DockPanel>
                         </Border>
 
-                        <!-- Scrollable command history over a subtle technical grid -->
-                        <Grid Grid.Row="2" Background="#030609">
-                            <Border Background="{StaticResource DotGridBrush}"
-                                    Opacity="0.11" IsHitTestVisible="False" />
-                            <ScrollViewer x:Name="DashboardConsoleScrollViewer"
-                                          Background="Transparent"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel x:Name="DashboardConsoleOutputPanel"
-                                            Margin="11,8,9,3" />
-                            </ScrollViewer>
-                        </Grid>
-
-                        <!-- Command prompt -->
-                        <Border Grid.Row="3" Background="#0A140D"
-                                BorderBrush="#2A5738" BorderThickness="0,1,0,0"
-                                Padding="9,7">
+                        <!-- GHOST COMMAND DECK -->
+                        <Border Grid.Column="1" Background="#030609"
+                                BorderBrush="#25505A" BorderThickness="1"
+                                CornerRadius="10" Padding="0" ClipToBounds="True">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#43CFE0" BlurRadius="16"
+                                                  ShadowDepth="0" Opacity="0.10" />
+                            </Border.Effect>
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="DashboardConsolePromptText" Text="PS&gt;" FontSize="10" FontWeight="Bold"
-                                           Foreground="#74E6B7" VerticalAlignment="Center"
-                                           Margin="0,0,8,0" />
-                                <TextBox x:Name="DashboardConsoleInput" Grid.Column="1"
-                                         Height="28" Padding="7,4"
-                                         Background="#030609" BorderBrush="#25472E"
-                                         BorderThickness="1" Foreground="#C8F8D4"
-                                         CaretBrush="#74E6B7" FontSize="9"
-                                         VerticalContentAlignment="Center"
-                                         ToolTip="Real PowerShell: run commands, pipelines, scripts, and local tools with your Windows account permissions."
-                                         PreviewKeyDown="DashboardConsoleInput_KeyDown" />
-                                <Button Grid.Column="2" Content="RUN  ↵"
-                                        Click="DashboardConsoleRun_Click"
-                                        Padding="8,5" FontSize="8"
-                                        Margin="6,0,0,0" Background="#13242D"
-                                        BorderBrush="#2C6840" Foreground="#8FFFB1" />
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="42" />
+                                    <RowDefinition Height="30" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="20" />
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0" Background="#0D170F"
+                                        BorderBrush="#285337" BorderThickness="0,0,0,1">
+                                    <Grid Margin="11,1,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,10,0">
+                                            <Ellipse Width="7" Height="7" Fill="#74E6B7"
+                                                     Margin="0,0,4,0" />
+                                            <Ellipse Width="7" Height="7" Fill="#36734A"
+                                                     Margin="0,0,4,0" />
+                                            <Ellipse Width="7" Height="7" Fill="#244B31" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="GHOST // COMMAND DECK"
+                                                       FontSize="9" FontWeight="Bold"
+                                                       Foreground="#D6FFE0" />
+                                            <TextBlock x:Name="DashboardConsoleHostText"
+                                                       Text="LOCAL SESSION / INITIALIZING"
+                                                       FontSize="7" Foreground="#6F9D7B"
+                                                       Margin="0,2,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <Border Background="#13242D" BorderBrush="#2A4B55"
+                                                    BorderThickness="1" CornerRadius="3"
+                                                    Padding="6,3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="DashboardConsoleStatusText"
+                                                           Text="STARTING" FontSize="7"
+                                                           Foreground="#74E6B7" />
+                                            </Border>
+                                            <Button Content="↻" Click="DashboardConsoleRestart_Click"
+                                                    Padding="6,3" FontSize="9" Margin="5,0,0,0"
+                                                    Background="#13242D" BorderBrush="#34764B"
+                                                    Foreground="#B5FFC8"
+                                                    ToolTip="Restart PowerShell session" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Row="1" Background="#071009"
+                                        BorderBrush="#142D1B" BorderThickness="0,0,0,1"
+                                        Padding="7,1">
+                                    <DockPanel LastChildFill="False"
+                                               VerticalAlignment="Center">
+                                        <TextBlock Text="QUICK RUN" FontSize="7"
+                                                   FontWeight="Bold" Foreground="#5F8F6C"
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,7,0" />
+                                        <Button Content="PWD" Tag="Get-Location"
+                                                Click="DashboardConsoleQuickCommand_Click"
+                                                Padding="6,2" FontSize="7" Margin="2,0"
+                                                Background="#0D1C11" BorderBrush="#244B30"
+                                                Foreground="#9DFFC1" />
+                                        <Button Content="PROCESSES"
+                                                Tag="Get-Process | Select-Object -First 5"
+                                                Click="DashboardConsoleQuickCommand_Click"
+                                                Padding="6,2" FontSize="7" Margin="2,0"
+                                                Background="#0D1C11" BorderBrush="#244B30"
+                                                Foreground="#9DFFC1" />
+                                        <Button Content="FILES"
+                                                Tag="Get-ChildItem -Force | Select-Object -First 8"
+                                                Click="DashboardConsoleQuickCommand_Click"
+                                                Padding="6,2" FontSize="7" Margin="2,0"
+                                                Background="#0D1C11" BorderBrush="#244B30"
+                                                Foreground="#9DFFC1" />
+                                        <Button Content="PS INFO" Tag="$PSVersionTable"
+                                                Click="DashboardConsoleQuickCommand_Click"
+                                                Padding="6,2" FontSize="7" Margin="2,0"
+                                                Background="#0D1C11" BorderBrush="#244B30"
+                                                Foreground="#9DFFC1" />
+                                    </DockPanel>
+                                </Border>
+
+                                <Grid Grid.Row="2" Background="#030609">
+                                    <Border Background="{StaticResource DotGridBrush}"
+                                            Opacity="0.10" IsHitTestVisible="False" />
+                                    <ScrollViewer x:Name="DashboardConsoleScrollViewer"
+                                                  Background="Transparent"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel x:Name="DashboardConsoleOutputPanel"
+                                                    Margin="11,8,9,3" />
+                                    </ScrollViewer>
+                                </Grid>
+
+                                <Border Grid.Row="3" Background="#0A140D"
+                                        BorderBrush="#2A5738" BorderThickness="0,1,0,0"
+                                        Padding="9,7">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="DashboardConsolePromptText"
+                                                   Text="PS&gt;" FontSize="10"
+                                                   FontWeight="Bold" Foreground="#74E6B7"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0" />
+                                        <TextBox x:Name="DashboardConsoleInput" Grid.Column="1"
+                                                 Height="28" Padding="7,4"
+                                                 Background="#030609" BorderBrush="#25472E"
+                                                 BorderThickness="1" Foreground="#C8F8D4"
+                                                 CaretBrush="#74E6B7" FontSize="9"
+                                                 VerticalContentAlignment="Center"
+                                                 ToolTip="Run PowerShell commands in your local Windows session."
+                                                 PreviewKeyDown="DashboardConsoleInput_KeyDown" />
+                                        <Button Grid.Column="2" Content="RUN  ↵"
+                                                Click="DashboardConsoleRun_Click"
+                                                Padding="8,5" FontSize="8"
+                                                Margin="6,0,0,0" Background="#13242D"
+                                                BorderBrush="#2C6840"
+                                                Foreground="#8FFFB1" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Row="4" Background="#071009" Padding="10,1">
+                                    <DockPanel>
+                                        <TextBlock Text="●" FontSize="7"
+                                                   Foreground="#74E6B7"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,5,0" />
+                                        <TextBlock Text="NATIVE POWERSHELL  //  PERSISTENT SESSION"
+                                                   FontSize="7" Foreground="#6F9D7B"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock DockPanel.Dock="Right" Text="GHOST / PS"
+                                                   FontSize="7" Foreground="#3E6849"
+                                                   VerticalAlignment="Center" />
+                                    </DockPanel>
+                                </Border>
                             </Grid>
                         </Border>
-
-                        <!-- Native session telemetry -->
-                        <Border Grid.Row="4" Background="#071009" Padding="10,1">
-                            <DockPanel>
-                                <TextBlock Text="●" FontSize="7" Foreground="#74E6B7"
-                                           VerticalAlignment="Center" Margin="0,0,5,0" />
-                                <TextBlock Text="NATIVE POWERSHELL  //  STDOUT + STDERR  //  SESSION PERSISTENT"
-                                           FontSize="7" Foreground="#6F9D7B"
-                                           VerticalAlignment="Center" />
-                                <TextBlock DockPanel.Dock="Right" Text="GHOST / PS"
-                                           FontSize="7" Foreground="#3E6849"
-                                           VerticalAlignment="Center" />
-                            </DockPanel>
-                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     <Grid x:Name="NetworkView" Grid.Column="1" Margin="26,20,26,22" Visibility="Collapsed">
         <Grid.Resources>
