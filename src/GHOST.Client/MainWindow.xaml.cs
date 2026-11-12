@@ -15,7 +15,6 @@ using IOPath = System.IO.Path;
 using Microsoft.Win32;
 using GHOST.Infrastructure.Persistence;
 using GHOST.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace GHOST;
 
@@ -530,8 +529,8 @@ public partial class MainWindow : Window
             case "vault":
                 RunGhostReadCommand("vault", ExecuteGhostVault);
                 break;
-            case "db":
-                RunGhostReadCommand("db", ExecuteGhostDatabase);
+            case "storage":
+                RunGhostReadCommand("storage", ExecuteGhostStorage);
                 break;
             case "open":
                 RunGhostReadCommand("open", () => ExecuteGhostOpen(parts));
@@ -570,7 +569,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("ghost audit [count]        Recent audit events (default 8)", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost network              Graph node and relationship totals", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost vault                Check evidence file presence + SHA-256 metadata", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("ghost db                   Active database provider, connection health + size", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("ghost storage              Local files, folders + record counts", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("ghost open <id|number>     Open a case inside GHOST", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine("SYSTEM TOOLS", Color.FromRgb(136, 171, 148), true);
         AddDashboardConsoleLine("ghost sysinfo              Windows and device details", Color.FromRgb(191, 255, 208));
@@ -601,7 +600,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostStatus()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         AddDashboardConsoleLine("GHOST CORE // STATUS SNAPSHOT", Color.FromRgb(99, 255, 160), true);
         AddDashboardConsoleLine($"HOST          {Environment.MachineName}", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine($"POWERSHELL    {(_dashboardPowerShellProcess is { HasExited: false } ? "CONNECTED" : "STOPPED")}",
@@ -622,7 +621,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostCases()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var cases = db.Cases.AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Take(10)
@@ -652,7 +651,7 @@ public partial class MainWindow : Window
         AddDashboardConsoleLine("Use: ghost open <ID or case number>", Color.FromRgb(136, 171, 148));
     }
 
-    private static int GetNextAvailableCaseId(GhostDbContext db)
+    private static int GetNextAvailableCaseId(GhostLocalStore db)
     {
         var usedIds = db.Cases.AsNoTracking()
             .Select(x => x.Id)
@@ -677,7 +676,7 @@ public partial class MainWindow : Window
         return candidate;
     }
 
-    private static string GenerateUniqueCaseNumber(GhostDbContext db)
+    private static string GenerateUniqueCaseNumber(GhostLocalStore db)
     {
         string caseNumber;
         do
@@ -737,9 +736,8 @@ public partial class MainWindow : Window
                 return;
             }
 
-            using var db = new GhostDbContext();
-            using var transaction = db.Database.BeginTransaction();
-
+            using var db = new GhostLocalStore();
+            
             var caseNumber = GenerateUniqueCaseNumber(db);
 
             var item = new CaseFile
@@ -760,8 +758,7 @@ public partial class MainWindow : Window
                 Details = $"Case created from GHOST terminal: {item.Title}"
             });
             db.SaveChanges();
-            transaction.Commit();
-
+            
             RefreshStats();
             RefreshNetwork();
             AddDashboardConsoleLine($"CASE CREATED // ID {item.Id} // {item.CaseNumber}",
@@ -785,7 +782,7 @@ public partial class MainWindow : Window
             }
 
             var identifier = arguments[3].Trim();
-            using var db = new GhostDbContext();
+            using var db = new GhostLocalStore();
             CaseFile? match;
             if (int.TryParse(identifier, out var selectedId))
                 match = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == selectedId);
@@ -828,12 +825,11 @@ public partial class MainWindow : Window
     }
 
     private static CaseDeletionSummary DeleteCaseRecords(
-        GhostDbContext db,
+        GhostLocalStore db,
         CaseFile caseFile,
         string source)
     {
-        using var transaction = db.Database.BeginTransaction();
-
+        
         var evidence = db.Evidence.Where(x => x.CaseFileId == caseFile.Id).ToList();
         var experiments = db.Experiments.Where(x => x.CaseFileId == caseFile.Id).ToList();
         var experimentIds = experiments.Select(x => x.Id).ToHashSet();
@@ -898,8 +894,7 @@ public partial class MainWindow : Window
         });
 
         db.SaveChanges();
-        transaction.Commit();
-
+        
         return new CaseDeletionSummary(
             caseFile.Id,
             caseFile.CaseNumber,
@@ -954,7 +949,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostEvidence()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var all = db.Evidence.AsNoTracking().ToList();
         var active = all.Count(x => !x.IsArchived);
         var archived = all.Count(x => x.IsArchived);
@@ -971,7 +966,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostLabs()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var experiments = db.Experiments.AsNoTracking()
             .OrderByDescending(x => x.CreatedAt).Take(5).ToList();
 
@@ -1000,7 +995,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var entries = db.AuditLogs.AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .Take(count)
@@ -1029,7 +1024,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostNetwork()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var cases = db.Cases.Count();
         var evidence = db.Evidence.Count(x => !x.IsArchived);
         var experiments = db.Experiments.Count();
@@ -1048,7 +1043,7 @@ public partial class MainWindow : Window
 
     private void ExecuteGhostVault()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         var items = db.Evidence.AsNoTracking().ToList();
         var missingFiles = new List<string>();
         var missingHashes = 0;
@@ -1086,35 +1081,18 @@ public partial class MainWindow : Window
             Color.FromRgb(136, 171, 148));
     }
 
-    private void ExecuteGhostDatabase()
+    private void ExecuteGhostStorage()
     {
-        AddDashboardConsoleLine("DATABASE // MARIADB", Color.FromRgb(99, 255, 160), true);
-        AddDashboardConsoleLine($"TARGET  {GhostDbContext.ActiveDatabaseTarget}", Color.FromRgb(136, 171, 148));
-
-        using var db = new GhostDbContext();
-        db.Database.OpenConnection();
-
-        using (var command = db.Database.GetDbConnection().CreateCommand())
-        {
-            command.CommandText = "SELECT DATABASE(), VERSION();";
-            using var reader = command.ExecuteReader();
-            if (!reader.Read())
-                throw new InvalidOperationException("MariaDB did not return its database and server version.");
-
-            var databaseName = reader.IsDBNull(0) ? "(no database selected)" : reader.GetString(0);
-            var serverVersion = reader.IsDBNull(1) ? "unknown" : reader.GetString(1);
-            AddDashboardConsoleLine("CONNECTION  OK", Color.FromRgb(99, 255, 160), true);
-            AddDashboardConsoleLine($"DATABASE    {databaseName}", Color.FromRgb(191, 255, 208));
-            AddDashboardConsoleLine($"SERVER      {serverVersion}", Color.FromRgb(136, 171, 148));
-        }
-
+        using var db = new GhostLocalStore();
+        AddDashboardConsoleLine("LOCAL STORAGE // DESKTOP", Color.FromRgb(99, 255, 160), true);
+        AddDashboardConsoleLine($"FOLDER      {GhostLocalStore.DataDirectory}", Color.FromRgb(136, 171, 148));
         AddDashboardConsoleLine($"CASES       {db.Cases.Count()}", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine($"EVIDENCE    {db.Evidence.Count()}", Color.FromRgb(191, 255, 208));
         AddDashboardConsoleLine($"EXPERIMENTS {db.Experiments.Count()}", Color.FromRgb(191, 255, 208));
-        AddDashboardConsoleLine("Inspect these tables in HeidiSQL under the database shown above.",
-            Color.FromRgb(136, 171, 148));
+        AddDashboardConsoleLine($"OBSERVATIONS {db.Observations.Count()}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine($"RELATIONSHIPS {db.Relationships.Count()}", Color.FromRgb(191, 255, 208));
+        AddDashboardConsoleLine("All GHOST records are stored as local JSON files.", Color.FromRgb(136, 171, 148));
     }
-
     private void ExecuteGhostOpen(string[] parts)
     {
         if (parts.Length < 3)
@@ -1126,7 +1104,7 @@ public partial class MainWindow : Window
         var selector = string.Join(" ", parts.Skip(2)).Trim().Trim('"');
         int? caseId = null;
 
-        using (var db = new GhostDbContext())
+        using (var db = new GhostLocalStore())
         {
             if (int.TryParse(selector, out var parsedId))
             {
@@ -1292,7 +1270,7 @@ public partial class MainWindow : Window
 
     private void RefreshStats()
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
 
         CasesCount.Text = db.Cases.Count(x => x.Status == "Open").ToString();
         ClosedCasesCount.Text = db.Cases.Count(x => x.Status == "Closed").ToString();
@@ -1703,10 +1681,9 @@ public partial class MainWindow : Window
             try
             {
                 int createdCaseId;
-                using (var db = new GhostDbContext())
+                using (var db = new GhostLocalStore())
                 {
-                    using var transaction = db.Database.BeginTransaction();
-                    var item = new CaseFile
+                                        var item = new CaseFile
                     {
                         Id = GetNextAvailableCaseId(db),
                         Title = title.Text.Trim(),
@@ -1723,8 +1700,7 @@ public partial class MainWindow : Window
                         Details = $"Case created: {item.Title} ({item.CaseNumber})."
                     });
                     db.SaveChanges();
-                    transaction.Commit();
-                    createdCaseId = item.Id;
+                                        createdCaseId = item.Id;
                 }
 
                 RefreshStats();
@@ -1911,7 +1887,7 @@ public partial class MainWindow : Window
 
             try
             {
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var item = db.Cases.FirstOrDefault(x => x.Id == selected.Id);
                 if (item is null)
                 {
@@ -1963,7 +1939,7 @@ public partial class MainWindow : Window
 
             var confirmation = MessageBox.Show(
                 this,
-                $"Delete case {selected.CaseNumber} / {selected.Title}?\n\nThis removes its linked database records and connections. Original evidence files stay on disk. This action cannot be undone.",
+                $"Delete case {selected.CaseNumber} / {selected.Title}?\n\nThis removes its linked local records and connections. Original evidence files stay on disk. This action cannot be undone.",
                 "GHOST // Confirm case deletion",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -1972,7 +1948,7 @@ public partial class MainWindow : Window
 
             try
             {
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var stored = db.Cases.FirstOrDefault(x => x.Id == selected.Id);
                 if (stored is null)
                 {
@@ -2013,7 +1989,7 @@ public partial class MainWindow : Window
             try
             {
                 var term = search.Text.Trim();
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var records = db.Cases
                     .AsNoTracking()
                     .OrderByDescending(x => x.CreatedAt)
@@ -2073,7 +2049,7 @@ public partial class MainWindow : Window
         List<EvidenceRelationship> allRelationships;
         List<AuditEntry> allAudit;
 
-        using (var db = new GhostDbContext())
+        using (var db = new GhostLocalStore())
         {
             caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
             if (caseFile is null)
@@ -2258,7 +2234,7 @@ public partial class MainWindow : Window
             }
             try
             {
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
                 if (stored is null)
                 {
@@ -2291,7 +2267,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
                 if (stored is null) return;
                 stored.Status = string.Equals(stored.Status, "Closed", StringComparison.OrdinalIgnoreCase) ? "Open" : "Closed";
@@ -2319,7 +2295,7 @@ public partial class MainWindow : Window
         {
             var confirmation = MessageBox.Show(
                 this,
-                $"Delete case {caseFile.CaseNumber} / {caseFile.Title}?\n\nLinked evidence, experiments, observations, timeline entries, and connections will be removed from the database. Original evidence files remain on disk. This cannot be undone.",
+                $"Delete case {caseFile.CaseNumber} / {caseFile.Title}?\n\nLinked evidence, experiments, observations, timeline entries, and connections will be removed from local storage. Original evidence files remain on disk. This cannot be undone.",
                 "GHOST // Confirm case deletion",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -2328,7 +2304,7 @@ public partial class MainWindow : Window
 
             try
             {
-                using var db = new GhostDbContext();
+                using var db = new GhostLocalStore();
                 var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
                 if (stored is null)
                 {
@@ -2393,7 +2369,7 @@ public partial class MainWindow : Window
     private void OpenAddTimelineEntryForm(int caseId)
     {
         CaseFile? caseFile;
-        using (var db = new GhostDbContext())
+        using (var db = new GhostLocalStore())
             caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
 
         if (caseFile is null)
@@ -2494,10 +2470,9 @@ public partial class MainWindow : Window
 
             try
             {
-                using (var db = new GhostDbContext())
+                using (var db = new GhostLocalStore())
                 {
-                    using var transaction = db.Database.BeginTransaction();
-                    var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
+                                        var stored = db.Cases.FirstOrDefault(x => x.Id == caseId);
                     if (stored is null)
                     {
                         status.Text = "This case no longer exists. Return to the archive and refresh.";
@@ -2522,8 +2497,7 @@ public partial class MainWindow : Window
                         Details = $"Timeline entry added to case {caseFile.CaseNumber}: {entryTitle}. {detailForAudit}"
                     });
                     db.SaveChanges();
-                    transaction.Commit();
-                }
+                                    }
 
                 RefreshStats();
                 RefreshNetwork();
@@ -2623,7 +2597,7 @@ public partial class MainWindow : Window
     }
 
     private static string GetGhostDataDirectory() =>
-        IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GHOST");
+        IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "GHOST");
 
     private static string GetEvidenceFilePath(string relativePath)
     {
@@ -2657,7 +2631,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            using var db = new GhostDbContext();
+            using var db = new GhostLocalStore();
 
             // Materialize records before building display labels. ToUpperInvariant is a
             // .NET presentation operation, not something we want translated into SQL.
@@ -2983,7 +2957,7 @@ public partial class MainWindow : Window
 
     private int? GetOwningCaseIdForEvidence(int evidenceId)
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         return db.Evidence.AsNoTracking()
             .Where(x => x.Id == evidenceId)
             .Select(x => (int?)x.CaseFileId)
@@ -2992,7 +2966,7 @@ public partial class MainWindow : Window
 
     private int? GetOwningCaseIdForExperiment(int experimentId)
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         return db.Experiments.AsNoTracking()
             .Where(x => x.Id == experimentId)
             .Select(x => (int?)x.CaseFileId)
@@ -3001,7 +2975,7 @@ public partial class MainWindow : Window
 
     private int? GetOwningCaseIdForObservation(int observationId)
     {
-        using var db = new GhostDbContext();
+        using var db = new GhostLocalStore();
         return (
             from observation in db.Observations.AsNoTracking()
             join experiment in db.Experiments.AsNoTracking()
@@ -3121,7 +3095,7 @@ public partial class MainWindow : Window
             var relationItem = RelationshipTypeComboBox.SelectedItem as ComboBoxItem;
             var relationType = relationItem?.Content?.ToString() ?? "Related to";
 
-            using var db = new GhostDbContext();
+            using var db = new GhostLocalStore();
             var relationship = new EvidenceRelationship
             {
                 SourceType = source.Type,
@@ -3191,7 +3165,7 @@ public partial class MainWindow : Window
 
         try
         {
-            using var db = new GhostDbContext();
+            using var db = new GhostLocalStore();
             var relationship = db.Relationships.FirstOrDefault(x => x.Id == selected.Id);
             if (relationship is null)
             {
