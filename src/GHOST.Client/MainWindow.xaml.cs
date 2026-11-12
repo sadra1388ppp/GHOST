@@ -622,7 +622,7 @@ public partial class MainWindow : Window
     private void ExecuteGhostCases()
     {
         using var db = new GhostLocalStore();
-        var cases = db.Cases.AsNoTracking()
+        var cases = db.Cases.AsQueryable()
             .OrderByDescending(x => x.CreatedAt)
             .Take(10)
             .ToList();
@@ -653,7 +653,7 @@ public partial class MainWindow : Window
 
     private static int GetNextAvailableCaseId(GhostLocalStore db)
     {
-        var usedIds = db.Cases.AsNoTracking()
+        var usedIds = db.Cases.AsQueryable()
             .Select(x => x.Id)
             .OrderBy(x => x)
             .ToList();
@@ -749,7 +749,7 @@ public partial class MainWindow : Window
             };
 
             db.Cases.Add(item);
-            db.SaveChanges();
+            db.Save();
             db.AuditLogs.Add(new AuditEntry
             {
                 EntityType = "Case",
@@ -757,7 +757,7 @@ public partial class MainWindow : Window
                 Action = "Created",
                 Details = $"Case created from GHOST terminal: {item.Title}"
             });
-            db.SaveChanges();
+            db.Save();
             
             RefreshStats();
             RefreshNetwork();
@@ -785,9 +785,9 @@ public partial class MainWindow : Window
             using var db = new GhostLocalStore();
             CaseFile? match;
             if (int.TryParse(identifier, out var selectedId))
-                match = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == selectedId);
+                match = db.Cases.AsQueryable().FirstOrDefault(x => x.Id == selectedId);
             else
-                match = db.Cases.AsNoTracking().ToList().FirstOrDefault(x =>
+                match = db.Cases.AsQueryable().ToList().FirstOrDefault(x =>
                     string.Equals(x.CaseNumber, identifier, StringComparison.OrdinalIgnoreCase));
 
             if (match is null)
@@ -893,7 +893,7 @@ public partial class MainWindow : Window
             Details = $"Deleted case {caseFile.CaseNumber} ({caseFile.Title}) from {source}. Removed {evidence.Count} evidence records, {experiments.Count} experiments, {observations.Count} observations, {timelineEvents.Count} timeline events and {relatedRelationships.Count} relationships. Historical activity was retained with the case number. Evidence files were retained on disk."
         });
 
-        db.SaveChanges();
+        db.Save();
         
         return new CaseDeletionSummary(
             caseFile.Id,
@@ -950,7 +950,7 @@ public partial class MainWindow : Window
     private void ExecuteGhostEvidence()
     {
         using var db = new GhostLocalStore();
-        var all = db.Evidence.AsNoTracking().ToList();
+        var all = db.Evidence.AsQueryable().ToList();
         var active = all.Count(x => !x.IsArchived);
         var archived = all.Count(x => x.IsArchived);
         var noHash = all.Count(x => string.IsNullOrWhiteSpace(x.Sha256));
@@ -967,7 +967,7 @@ public partial class MainWindow : Window
     private void ExecuteGhostLabs()
     {
         using var db = new GhostLocalStore();
-        var experiments = db.Experiments.AsNoTracking()
+        var experiments = db.Experiments.AsQueryable()
             .OrderByDescending(x => x.CreatedAt).Take(5).ToList();
 
         AddDashboardConsoleLine("LABS // RESEARCH INVENTORY", Color.FromRgb(99, 255, 160), true);
@@ -996,7 +996,7 @@ public partial class MainWindow : Window
         }
 
         using var db = new GhostLocalStore();
-        var entries = db.AuditLogs.AsNoTracking()
+        var entries = db.AuditLogs.AsQueryable()
             .OrderByDescending(x => x.CreatedAt)
             .Take(count)
             .ToList();
@@ -1044,7 +1044,7 @@ public partial class MainWindow : Window
     private void ExecuteGhostVault()
     {
         using var db = new GhostLocalStore();
-        var items = db.Evidence.AsNoTracking().ToList();
+        var items = db.Evidence.AsQueryable().ToList();
         var missingFiles = new List<string>();
         var missingHashes = 0;
 
@@ -1108,14 +1108,14 @@ public partial class MainWindow : Window
         {
             if (int.TryParse(selector, out var parsedId))
             {
-                caseId = db.Cases.AsNoTracking()
+                caseId = db.Cases.AsQueryable()
                     .Where(x => x.Id == parsedId)
                     .Select(x => (int?)x.Id)
                     .FirstOrDefault();
             }
             else
             {
-                caseId = db.Cases.AsNoTracking()
+                caseId = db.Cases.AsQueryable()
                     .Where(x => x.CaseNumber == selector)
                     .Select(x => (int?)x.Id)
                     .FirstOrDefault();
@@ -1278,7 +1278,7 @@ public partial class MainWindow : Window
         ExperimentsCount.Text = db.Experiments.Count().ToString();
         EvidenceCount.Text = db.Evidence.Count(x => !x.IsArchived).ToString();
         var recentCases = db.Cases
-            .AsNoTracking()
+            .AsQueryable()
             .OrderByDescending(x => x.CreatedAt)
             .Take(4)
             .ToList();
@@ -1699,7 +1699,7 @@ public partial class MainWindow : Window
                         Action = "Created",
                         Details = $"Case created: {item.Title} ({item.CaseNumber})."
                     });
-                    db.SaveChanges();
+                    db.Save();
                                         createdCaseId = item.Id;
                 }
 
@@ -1907,7 +1907,7 @@ public partial class MainWindow : Window
                     Action = newStatus == "Closed" ? "Closed" : "Reopened",
                     Details = $"Case {item.CaseNumber} status changed to {newStatus}."
                 });
-                db.SaveChanges();
+                db.Save();
                 RefreshRows();
                 RefreshStats();
                 RefreshNetwork();
@@ -1991,7 +1991,7 @@ public partial class MainWindow : Window
                 var term = search.Text.Trim();
                 using var db = new GhostLocalStore();
                 var records = db.Cases
-                    .AsNoTracking()
+                    .AsQueryable()
                     .OrderByDescending(x => x.CreatedAt)
                     .ToList()
                     .Select(x => new CaseArchiveRow(
@@ -2051,7 +2051,7 @@ public partial class MainWindow : Window
 
         using (var db = new GhostLocalStore())
         {
-            caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
+            caseFile = db.Cases.AsQueryable().FirstOrDefault(x => x.Id == caseId);
             if (caseFile is null)
             {
                 MessageBox.Show(this, "This case no longer exists in local storage.", "GHOST",
@@ -2060,25 +2060,25 @@ public partial class MainWindow : Window
                 return;
             }
 
-            evidence = db.Evidence.AsNoTracking()
+            evidence = db.Evidence.AsQueryable()
                 .Where(x => x.CaseFileId == caseId)
                 .OrderByDescending(x => x.CollectedAt)
                 .ToList();
-            experiments = db.Experiments.AsNoTracking()
+            experiments = db.Experiments.AsQueryable()
                 .Where(x => x.CaseFileId == caseId)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToList();
             var experimentIds = experiments.Select(x => x.Id).ToList();
-            observations = db.Observations.AsNoTracking()
+            observations = db.Observations.AsQueryable()
                 .Where(x => experimentIds.Contains(x.ExperimentId))
                 .OrderByDescending(x => x.RecordedAt)
                 .ToList();
-            timeline = db.TimelineEvents.AsNoTracking()
+            timeline = db.TimelineEvents.AsQueryable()
                 .Where(x => x.CaseFileId == caseId)
                 .OrderByDescending(x => x.OccurredAt)
                 .ToList();
-            allRelationships = db.Relationships.AsNoTracking().ToList();
-            allAudit = db.AuditLogs.AsNoTracking()
+            allRelationships = db.Relationships.AsQueryable().ToList();
+            allAudit = db.AuditLogs.AsQueryable()
                 .OrderByDescending(x => x.CreatedAt)
                 .ToList();
         }
@@ -2252,7 +2252,7 @@ public partial class MainWindow : Window
                     Action = "Updated",
                     Details = $"Case details updated. Title: {oldTitle} → {stored.Title}."
                 });
-                db.SaveChanges();
+                db.Save();
                 RefreshStats();
                 RefreshNetwork();
                 caseStatusMessage.Text = "Case details saved and added to the audit history.";
@@ -2279,7 +2279,7 @@ public partial class MainWindow : Window
                     Action = stored.Status == "Closed" ? "Closed" : "Reopened",
                     Details = $"Case {stored.CaseNumber} status changed to {stored.Status}."
                 });
-                db.SaveChanges();
+                db.Save();
                 RefreshStats();
                 RefreshNetwork();
                 OpenCaseWorkspace(caseId);
@@ -2370,7 +2370,7 @@ public partial class MainWindow : Window
     {
         CaseFile? caseFile;
         using (var db = new GhostLocalStore())
-            caseFile = db.Cases.AsNoTracking().FirstOrDefault(x => x.Id == caseId);
+            caseFile = db.Cases.AsQueryable().FirstOrDefault(x => x.Id == caseId);
 
         if (caseFile is null)
         {
@@ -2496,7 +2496,7 @@ public partial class MainWindow : Window
                         Action = "Timeline Entry Added",
                         Details = $"Timeline entry added to case {caseFile.CaseNumber}: {entryTitle}. {detailForAudit}"
                     });
-                    db.SaveChanges();
+                    db.Save();
                                     }
 
                 RefreshStats();
@@ -2635,15 +2635,15 @@ public partial class MainWindow : Window
 
             // Materialize records before building display labels. ToUpperInvariant is a
             // .NET presentation operation, not something we want translated into SQL.
-            var cases = db.Cases.AsNoTracking().OrderBy(x => x.CreatedAt).ToList();
-            var evidence = db.Evidence.AsNoTracking()
+            var cases = db.Cases.AsQueryable().OrderBy(x => x.CreatedAt).ToList();
+            var evidence = db.Evidence.AsQueryable()
                 .Where(x => !x.IsArchived)
                 .OrderBy(x => x.CollectedAt)
                 .ToList();
-            var experiments = db.Experiments.AsNoTracking()
+            var experiments = db.Experiments.AsQueryable()
                 .OrderBy(x => x.CreatedAt)
                 .ToList();
-            var observations = db.Observations.AsNoTracking()
+            var observations = db.Observations.AsQueryable()
                 .OrderBy(x => x.RecordedAt)
                 .ToList();
 
@@ -2660,7 +2660,7 @@ public partial class MainWindow : Window
             ];
 
             var nodeLookup = _nodes.ToDictionary(x => x.Key, x => x);
-            var savedRelationships = db.Relationships.AsNoTracking()
+            var savedRelationships = db.Relationships.AsQueryable()
                 .OrderByDescending(x => x.CreatedAt)
                 .ToList();
 
@@ -2958,7 +2958,7 @@ public partial class MainWindow : Window
     private int? GetOwningCaseIdForEvidence(int evidenceId)
     {
         using var db = new GhostLocalStore();
-        return db.Evidence.AsNoTracking()
+        return db.Evidence.AsQueryable()
             .Where(x => x.Id == evidenceId)
             .Select(x => (int?)x.CaseFileId)
             .FirstOrDefault();
@@ -2967,7 +2967,7 @@ public partial class MainWindow : Window
     private int? GetOwningCaseIdForExperiment(int experimentId)
     {
         using var db = new GhostLocalStore();
-        return db.Experiments.AsNoTracking()
+        return db.Experiments.AsQueryable()
             .Where(x => x.Id == experimentId)
             .Select(x => (int?)x.CaseFileId)
             .FirstOrDefault();
@@ -2977,8 +2977,8 @@ public partial class MainWindow : Window
     {
         using var db = new GhostLocalStore();
         return (
-            from observation in db.Observations.AsNoTracking()
-            join experiment in db.Experiments.AsNoTracking()
+            from observation in db.Observations.AsQueryable()
+            join experiment in db.Experiments.AsQueryable()
                 on observation.ExperimentId equals experiment.Id
             where observation.Id == observationId
             select (int?)experiment.CaseFileId)
@@ -3108,7 +3108,7 @@ public partial class MainWindow : Window
             };
 
             db.Relationships.Add(relationship);
-            db.SaveChanges();
+            db.Save();
 
             db.AuditLogs.Add(new AuditEntry
             {
@@ -3117,7 +3117,7 @@ public partial class MainWindow : Window
                 Action = "Created",
                 Details = $"{relationship.RelationshipType}: {source.DisplayText} -> {target.DisplayText}"
             });
-            db.SaveChanges();
+            db.Save();
 
             CreateConnectionPanel.Visibility = Visibility.Collapsed;
             RefreshNetwork();
@@ -3174,7 +3174,7 @@ public partial class MainWindow : Window
             }
 
             db.Relationships.Remove(relationship);
-            db.SaveChanges();
+            db.Save();
 
             db.AuditLogs.Add(new AuditEntry
             {
@@ -3183,7 +3183,7 @@ public partial class MainWindow : Window
                 Action = "Deleted",
                 Details = $"Deleted connection: {selected.SourceLabel} -> {selected.TargetLabel}"
             });
-            db.SaveChanges();
+            db.Save();
 
             RefreshNetwork();
         }
