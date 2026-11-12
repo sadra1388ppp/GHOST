@@ -63,6 +63,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        StateChanged += (_, _) =>
+        {
+            WindowMaximizeGlyph.Text = WindowState == WindowState.Maximized ? "❐" : "□";
+        };
         SetActiveNavigation("Dashboard");
 
         // Fit the initial window to the usable desktop area, including common laptop screens.
@@ -92,6 +96,23 @@ public partial class MainWindow : Window
             _clockTimer.Stop();
             StopDashboardPowerShell();
         };
+    }
+
+    private void WindowMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void WindowMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void WindowClose_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
     }
 
     private void ShowModuleView(UIElement content, string title)
