@@ -448,24 +448,51 @@
                                         <TextBlock Text="System Health"
                                                    FontSize="19" FontWeight="Bold"
                                                    Foreground="#F1F7FC" />
-                                        <Border Background="#0C1D14"
-                                                BorderBrush="#21442E"
+                                        <Border Background="#0B1B12"
+                                                BorderBrush="#28533A"
                                                 BorderThickness="1"
-                                                CornerRadius="7"
-                                                Padding="9,7"
+                                                CornerRadius="8"
+                                                Padding="10,8"
                                                 Margin="0,10,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="SYSTEM UPTIME"
-                                                           FontSize="7"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="#86B398" />
-                                                <TextBlock x:Name="SystemUptimeText"
-                                                           Text="--"
-                                                           FontSize="13"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="#74E6B7"
-                                                           Margin="0,3,0,0" />
-                                            </StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="34" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="30" Height="30"
+                                                        CornerRadius="7"
+                                                        Background="#142B1D"
+                                                        BorderBrush="#315C40"
+                                                        BorderThickness="1"
+                                                        VerticalAlignment="Center">
+                                                    <Grid Width="17" Height="17">
+                                                        <Ellipse Width="15" Height="15"
+                                                                 Stroke="#74E6B7"
+                                                                 StrokeThickness="1.2"
+                                                                 Opacity="0.9" />
+                                                        <Path Data="M8.5,3.5 L8.5,8.5 L12,10.5"
+                                                              Stroke="#74E6B7"
+                                                              StrokeThickness="1.4"
+                                                              StrokeStartLineCap="Round"
+                                                              StrokeEndLineCap="Round" />
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            Margin="8,0,0,0">
+                                                    <TextBlock Text="SYSTEM UPTIME"
+                                                               FontSize="7"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#86B398" />
+                                                    <TextBlock x:Name="SystemUptimeText"
+                                                               Text="--"
+                                                               FontFamily="Consolas"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#74E6B7"
+                                                               Margin="0,3,0,0" />
+                                                </StackPanel>
+                                            </Grid>
                                         </Border>
                                     </StackPanel>
                                 </Grid>
