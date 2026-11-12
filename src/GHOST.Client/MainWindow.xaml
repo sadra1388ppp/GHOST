@@ -174,7 +174,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-    </Window.Resources>ces>
+    </Window.Resources>
 
     <Grid Background="{StaticResource BgBrush}">
         <Grid.RowDefinitions>
